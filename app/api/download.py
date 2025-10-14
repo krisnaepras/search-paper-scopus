@@ -2,13 +2,34 @@
 Download and DOI resolution API routes
 """
 
-from fastapi import APIRouter, Path, HTTPException
+from fastapi import APIRouter, Path, HTTPException, Query, Depends
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
 import requests
 
 from app.core.config import settings
-from app.services import scopus_service
+from app.db.database import get_db
+from app.db.models import User
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/api", tags=["download"])
+
+
+@router.get("/download")
+async def download_paper(
+    scopus_id: str = Query(..., description="Scopus ID"),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Download paper via Sci-Hub redirect
+    """
+    if not scopus_id or scopus_id == 'N/A':
+        raise HTTPException(status_code=404, detail="Scopus ID not available")
+    
+    # Redirect to Sci-Hub (try multiple mirrors)
+    scihub_url = f"https://sci-hub.se/{scopus_id}"
+    
+    return RedirectResponse(url=scihub_url)
 
 
 @router.get("/pdf-link/{doi:path}")
@@ -36,7 +57,10 @@ async def get_pdf_link(doi: str = Path(..., description="DOI of the paper")):
 
 
 @router.get("/download-info/{eid}")
-async def get_download_info(eid: str = Path(..., description="Scopus EID")):
+async def get_download_info(
+    eid: str = Path(..., description="Scopus EID"),
+    current_user: User = Depends(get_current_user)
+):
     """
     Get download information for a paper by EID
     Returns multiple download options
@@ -44,14 +68,10 @@ async def get_download_info(eid: str = Path(..., description="Scopus EID")):
     if eid == 'N/A' or not eid:
         raise HTTPException(status_code=404, detail="EID not available")
     
-    # Get paper details
-    paper = scopus_service.get_paper_by_eid(eid)
-    
-    if not paper:
-        raise HTTPException(status_code=404, detail="Paper not found")
-    
-    doi = paper.get('doi', 'N/A')
-    title = paper.get('title', 'N/A')
+    # For now, return basic download info without fetching from Scopus
+    # (since scopus_service singleton was removed)
+    doi = 'N/A'
+    title = eid
     
     download_options = {
         "eid": eid,
@@ -89,10 +109,5 @@ async def get_download_info(eid: str = Path(..., description="Scopus EID")):
                 "note": "May find free PDF versions"
             }
         ])
-    
-    # Check for open access
-    if paper.get('open_access'):
-        download_options["open_access"] = True
-        download_options["note"] = "This paper is Open Access - free download should be available"
     
     return download_options
