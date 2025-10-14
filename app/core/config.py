@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     # Database Configuration (PostgreSQL from Heroku)
     database_url: str = "postgresql://user:password@localhost:5432/scopus_db"
     
+    @property
+    def database_url_fixed(self) -> str:
+        """Fix database URL - Heroku uses postgres:// but SQLAlchemy needs postgresql://"""
+        if self.database_url.startswith("postgres://"):
+            return self.database_url.replace("postgres://", "postgresql://", 1)
+        return self.database_url
+    
     # Redis Configuration (from Heroku)
     redis_url: str = "redis://localhost:6379/0"
     redis_cache_ttl: int = 3600  # 1 hour
@@ -35,10 +42,17 @@ class Settings(BaseSettings):
     encryption_key: str = secrets.token_urlsafe(32)  # For encrypting API keys
     
     # CORS Settings
-    cors_origins: list[str] = ["*"]
+    cors_origins: str = "*"  # Changed to string, can be comma-separated
     cors_credentials: bool = True
-    cors_methods: list[str] = ["*"]
-    cors_headers: list[str] = ["*"]
+    cors_methods: str = "*"
+    cors_headers: str = "*"
+    
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS origins string to list"""
+        if self.cors_origins == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.cors_origins.split(",")]
     
     # API Limits
     max_results_per_page: int = 25

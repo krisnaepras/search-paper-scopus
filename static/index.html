@@ -1,943 +1,1010 @@
 <!DOCTYPE html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Scopus Search - Paper Finder</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scopus Search API v3.0</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 20px;
-      }
-
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      .header {
-        text-align: center;
-        color: white;
-        margin-bottom: 30px;
-      }
-
-      .header h1 {
-        font-size: 2.5em;
-        margin-bottom: 10px;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-      }
-
-      .header p {
-        font-size: 1.1em;
-        opacity: 0.9;
-      }
-
-      .search-box {
-        background: white;
-        border-radius: 15px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        margin-bottom: 30px;
-      }
-
-      .form-group {
-        margin-bottom: 20px;
-      }
-
-      label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #333;
-      }
-
-      input,
-      select {
-        width: 100%;
-        padding: 12px 15px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 14px;
-        transition: border-color 0.3s;
-      }
-
-      input:focus,
-      select:focus {
-        outline: none;
-        border-color: #667eea;
-      }
-
-      .row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-      }
-
-      .btn {
-        padding: 12px 30px;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        margin-right: 10px;
-      }
-
-      .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-      }
-
-      .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-      }
-
-      .btn-secondary {
-        background: #f0f0f0;
-        color: #333;
-      }
-
-      .btn-secondary:hover {
-        background: #e0e0e0;
-      }
-
-      .btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .loading {
-        text-align: center;
-        padding: 40px;
-        display: none;
-      }
-
-      .spinner {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #667eea;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 20px;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        100% {
-          transform: rotate(360deg);
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
-      }
-
-      .results {
-        display: none;
-      }
-
-      .stats-bar {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-around;
-        flex-wrap: wrap;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-      }
-
-      .stat-item {
-        text-align: center;
-        padding: 10px 20px;
-      }
-
-      .stat-value {
-        font-size: 2em;
-        font-weight: 700;
-        color: #667eea;
-      }
-
-      .stat-label {
-        color: #666;
-        font-size: 0.9em;
-        margin-top: 5px;
-      }
-
-      .papers-grid {
-        display: grid;
-        gap: 20px;
-      }
-
-      .paper-card {
-        background: white;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s, box-shadow 0.3s;
-      }
-
-      .paper-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-      }
-
-      .paper-title {
-        font-size: 1.3em;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 10px;
-        line-height: 1.4;
-      }
-
-      .paper-authors {
-        color: #667eea;
-        margin-bottom: 10px;
-        font-weight: 500;
-      }
-
-      .paper-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin: 15px 0;
-        font-size: 0.9em;
-        color: #666;
-      }
-
-      .meta-item {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-      }
-
-      .badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.85em;
-        font-weight: 600;
-      }
-
-      .badge-citations {
-        background: #ffd700;
-        color: #333;
-      }
-
-      .badge-year {
-        background: #e0e7ff;
-        color: #667eea;
-      }
-
-      .badge-type {
-        background: #f0f0f0;
-        color: #666;
-      }
-
-      .paper-journal {
-        color: #555;
-        font-style: italic;
-        margin: 10px 0;
-      }
-
-      .paper-links {
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 1px solid #e0e0e0;
-      }
-
-      .paper-link {
-        display: inline-block;
-        padding: 8px 16px;
-        background: #667eea;
-        color: white;
-        text-decoration: none;
-        border-radius: 6px;
-        font-size: 0.9em;
-        margin-right: 10px;
-        transition: background 0.3s;
-      }
-
-      .paper-link:hover {
-        background: #5568d3;
-      }
-
-      .export-section {
-        text-align: center;
-        margin-top: 20px;
-        padding: 20px;
-        background: white;
-        border-radius: 12px;
-      }
-
-      .alert {
-        padding: 15px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        display: none;
-      }
-
-      .alert-error {
-        background: #fee;
-        color: #c33;
-        border-left: 4px solid #c33;
-      }
-
-      .alert-success {
-        background: #efe;
-        color: #3c3;
-        border-left: 4px solid #3c3;
-      }
-
-      /* Modal styles */
-      .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        animation: fadeIn 0.3s;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
-        to {
-          opacity: 1;
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
         }
-      }
-
-      .modal-content {
-        background-color: white;
-        margin: 5% auto;
-        padding: 30px;
-        border-radius: 15px;
-        max-width: 600px;
-        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
-        animation: slideDown 0.3s;
-      }
-
-      @keyframes slideDown {
-        from {
-          transform: translateY(-50px);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #e0e0e0;
-      }
-
-      .modal-title {
-        font-size: 1.5em;
-        font-weight: 700;
-        color: #333;
-      }
-
-      .close-btn {
-        font-size: 2em;
-        font-weight: 300;
-        color: #999;
-        cursor: pointer;
-        transition: color 0.3s;
-        border: none;
-        background: none;
-        padding: 0;
-        width: 40px;
-        height: 40px;
-        line-height: 40px;
-        text-align: center;
-      }
-
-      .close-btn:hover {
-        color: #333;
-      }
-
-      .download-option {
-        padding: 15px;
-        margin: 10px 0;
-        border: 2px solid #e0e0e0;
-        border-radius: 10px;
-        transition: all 0.3s;
-      }
-
-      .download-option:hover {
-        border-color: #667eea;
-        background: #f9f9ff;
-        transform: translateX(5px);
-      }
-
-      .download-option-title {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 5px;
-        font-size: 1.1em;
-      }
-
-      .download-option-note {
-        font-size: 0.85em;
-        color: #666;
-        margin-top: 5px;
-      }
-
-      .download-link {
-        display: inline-block;
-        padding: 10px 20px;
-        background: #667eea;
-        color: white;
-        text-decoration: none;
-        border-radius: 8px;
-        margin-top: 10px;
-        transition: background 0.3s;
-      }
-
-      .download-link:hover {
-        background: #5568d3;
-      }
-
-      @media (max-width: 768px) {
+        
         .header h1 {
-          font-size: 1.8em;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
-
-        .stats-bar {
-          flex-direction: column;
+        
+        .header-subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 15px;
         }
-
+        
+        .user-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .auth-box {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 450px;
+            margin: 0 auto;
+        }
+        
+        .auth-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .nav-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .nav-item {
+            padding: 12px 24px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
         .btn {
-          width: 100%;
-          margin: 5px 0;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 10px;
         }
-
-        .modal-content {
-          margin: 10% 20px;
-          padding: 20px;
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
-      }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        
+        .paper-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+        
+        .paper-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .paper-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .paper-meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .paper-meta span {
+            margin-right: 15px;
+            display: inline-block;
+        }
+        
+        .paper-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .list-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .list-item:hover {
+            background: #e9ecef;
+        }
+        
+        .list-item-content {
+            flex: 1;
+        }
+        
+        .list-item-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .list-item-meta {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-secondary {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state-text {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s;
+        }
+        
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            .card {
+                padding: 20px;
+            }
+            .auth-box {
+                padding: 30px 20px;
+            }
+        }
     </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <h1>🔍 Scopus Paper Search</h1>
-        <p>Cari dan analisis paper ilmiah dari database Scopus</p>
-      </div>
+</head>
 
-      <div class="alert alert-error" id="errorAlert"></div>
-      <div class="alert alert-success" id="successAlert"></div>
-
-      <div class="search-box">
-        <form id="searchForm">
-          <div class="form-group">
-            <label for="query">🔎 Kata Kunci Pencarian</label>
-            <input
-              type="text"
-              id="query"
-              placeholder="Contoh: machine learning, obesity classification, neural networks..."
-              required
-            />
-          </div>
-
-          <div class="row">
-            <div class="form-group">
-              <label for="limit">📊 Jumlah Hasil</label>
-              <select id="limit">
-                <option value="10">10 papers</option>
-                <option value="25" selected>25 papers</option>
-                <option value="50">50 papers</option>
-                <option value="100">100 papers</option>
-                <option value="200">200 papers</option>
-                <option value="500">500 papers</option>
-              </select>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>🔬 Scopus Search API v3.0</h1>
+                <p class="header-subtitle">{{ headerSubtitle }}</p>
+                <transition name="fade">
+                    <div v-if="isAuthenticated" class="user-badge">
+                        <span>👤 {{ user?.email }}</span>
+                        <button @click="logout" class="btn btn-secondary btn-sm">Logout</button>
+                    </div>
+                </transition>
             </div>
 
-            <div class="form-group">
-              <label for="yearFrom">📅 Tahun Dari</label>
-              <input
-                type="number"
-                id="yearFrom"
-                min="1900"
-                max="2025"
-                placeholder="2020"
-              />
-            </div>
+            <transition name="fade">
+                <div v-if="!isAuthenticated" class="auth-box">
+                    <h2>🔐 Authentication</h2>
+                    
+                    <div class="tab-buttons">
+                        <button @click="authTab = 'login'" :class="{ active: authTab === 'login' }" class="tab-btn">
+                            Login
+                        </button>
+                        <button @click="authTab = 'register'" :class="{ active: authTab === 'register' }" class="tab-btn">
+                            Register
+                        </button>
+                    </div>
 
-            <div class="form-group">
-              <label for="yearTo">📅 Tahun Sampai</label>
-              <input
-                type="number"
-                id="yearTo"
-                min="1900"
-                max="2025"
-                placeholder="2024"
-              />
-            </div>
+                    <transition name="fade">
+                        <div v-if="authAlert.show" class="alert" :class="'alert-' + authAlert.type">
+                            {{ authAlert.message }}
+                        </div>
+                    </transition>
 
-            <div class="form-group">
-              <label for="sortBy">🔢 Urutkan Berdasarkan</label>
-              <select id="sortBy">
-                <option value="citations" selected>Paling Banyak Sitasi</option>
-                <option value="date_newest">Terbaru</option>
-                <option value="date_oldest">Terlama</option>
-                <option value="relevance">Relevansi</option>
-              </select>
-            </div>
-          </div>
+                    <div v-show="authTab === 'login'">
+                        <form @submit.prevent="login">
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" v-model="loginForm.email" class="form-control" placeholder="your@email.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password</label>
+                                <input type="password" v-model="loginForm.password" class="form-control" placeholder="Enter password" required>
+                            </div>
+                            <button type="submit" :disabled="authLoading" class="btn btn-primary" style="width: 100%;">
+                                <span v-if="!authLoading">🔓 Login</span>
+                                <span v-else>Loading...</span>
+                            </button>
+                        </form>
+                    </div>
 
-          <div style="margin-top: 25px; text-align: center">
-            <button type="submit" class="btn btn-primary">🚀 Cari Paper</button>
-            <button
-              type="button"
-              class="btn btn-secondary"
-              onclick="resetForm()"
-            >
-              🔄 Reset
-            </button>
-          </div>
-        </form>
-      </div>
+                    <div v-show="authTab === 'register'">
+                        <form @submit.prevent="register">
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" v-model="registerForm.email" class="form-control" placeholder="your@email.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password</label>
+                                <input type="password" v-model="registerForm.password" class="form-control" placeholder="Min. 6 characters" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Confirm Password</label>
+                                <input type="password" v-model="registerForm.confirmPassword" class="form-control" placeholder="Re-enter password" required>
+                            </div>
+                            <button type="submit" :disabled="authLoading" class="btn btn-primary" style="width: 100%;">
+                                <span v-if="!authLoading">📝 Register</span>
+                                <span v-else>Loading...</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </transition>
 
-      <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p>Mencari paper di Scopus...</p>
-      </div>
+            <transition name="fade">
+                <div v-if="isAuthenticated">
+                    <div class="nav-bar">
+                        <button @click="activeSection = 'search'" :class="{ active: activeSection === 'search' }" class="nav-item">
+                            🔍 Search
+                        </button>
+                        <button @click="switchSection('wishlist')" :class="{ active: activeSection === 'wishlist' }" class="nav-item">
+                            ⭐ Wishlist
+                        </button>
+                        <button @click="switchSection('apikeys')" :class="{ active: activeSection === 'apikeys' }" class="nav-item">
+                            🔑 API Keys
+                        </button>
+                    </div>
 
-      <div class="results" id="results">
-        <div class="stats-bar" id="statsBar">
-          <div class="stat-item">
-            <div class="stat-value" id="totalPapers">0</div>
-            <div class="stat-label">Total Papers</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value" id="totalCitations">0</div>
-            <div class="stat-label">Total Sitasi</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value" id="avgCitations">0</div>
-            <div class="stat-label">Rata-rata Sitasi</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value" id="maxCitations">0</div>
-            <div class="stat-label">Sitasi Tertinggi</div>
-          </div>
+                    <div v-show="activeSection === 'search'" class="card">
+                        <h3 class="card-title">🔍 Search Papers</h3>
+                        
+                        <transition name="fade">
+                            <div v-if="searchAlert.show" class="alert" :class="'alert-' + searchAlert.type">
+                                {{ searchAlert.message }}
+                            </div>
+                        </transition>
+
+                        <form @submit.prevent="searchPapers">
+                            <div class="form-group">
+                                <label class="form-label">Search Query</label>
+                                <input type="text" v-model="searchForm.query" class="form-control" placeholder="e.g., machine learning" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Limit</label>
+                                    <input type="number" v-model.number="searchForm.limit" class="form-control" min="1" max="1000">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Year From</label>
+                                    <input type="number" v-model.number="searchForm.yearFrom" class="form-control" placeholder="e.g., 2020">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Year To</label>
+                                    <input type="number" v-model.number="searchForm.yearTo" class="form-control" placeholder="e.g., 2024">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Sort By</label>
+                                    <select v-model="searchForm.sortBy" class="form-control">
+                                        <option value="-citedby-count">Most Cited</option>
+                                        <option value="-date">Newest First</option>
+                                        <option value="date">Oldest First</option>
+                                        <option value="relevance">Relevance</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button type="submit" :disabled="searchLoading" class="btn btn-primary">
+                                <span v-if="!searchLoading">🔍 Search</span>
+                                <span v-else>Searching...</span>
+                            </button>
+                            <button type="button" @click="clearSearch" class="btn btn-secondary">🗑️ Clear</button>
+                        </form>
+
+                        <div v-if="searchLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading papers...</p>
+                        </div>
+
+                        <div v-if="searchResults.length > 0" style="margin-top: 30px;">
+                            <h3>Results: {{ searchResults.length }} papers</h3>
+                            <div v-for="paper in searchResults" :key="paper.eid" class="paper-card">
+                                <div class="paper-title">{{ paper.title }}</div>
+                                <div class="paper-meta">
+                                    <span>👤 {{ paper.authors }}</span>
+                                    <span>📅 {{ paper.year }}</span>
+                                    <span>📖 {{ paper.publication }}</span>
+                                    <span>📊 Cited: {{ paper.cited_by }}</span>
+                                    <span v-if="paper.open_access" style="color: #28a745;">🔓 Open Access</span>
+                                </div>
+                                <div class="paper-actions">
+                                    <button @click="addToWishlist(paper)" class="btn btn-success btn-sm">
+                                        ⭐ Save to Wishlist
+                                    </button>
+                                    <a v-if="paper.scopus_url !== 'N/A'" :href="paper.scopus_url" target="_blank" class="btn btn-primary btn-sm">
+                                        🔗 View on Scopus
+                                    </a>
+                                    <a v-if="paper.doi !== 'N/A'" :href="'https://doi.org/' + paper.doi" target="_blank" class="btn btn-secondary btn-sm">
+                                        📄 DOI
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-show="activeSection === 'wishlist'" class="card">
+                        <h3 class="card-title">⭐ My Wishlist</h3>
+                        
+                        <transition name="fade">
+                            <div v-if="wishlistAlert.show" class="alert" :class="'alert-' + wishlistAlert.type">
+                                {{ wishlistAlert.message }}
+                            </div>
+                        </transition>
+
+                        <div v-if="wishlistLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading wishlist...</p>
+                        </div>
+
+                        <div v-if="!wishlistLoading && wishlist.length === 0" class="empty-state">
+                            <div class="empty-state-icon">📚</div>
+                            <div class="empty-state-text">Your wishlist is empty</div>
+                            <p>Save papers from search results to see them here</p>
+                        </div>
+
+                        <div v-for="item in wishlist" :key="item.id" class="paper-card">
+                            <div class="paper-title">{{ item.title }}</div>
+                            <div class="paper-meta">
+                                <span>👤 {{ item.authors || 'N/A' }}</span>
+                                <span>📅 {{ item.year || 'N/A' }}</span>
+                                <span>📖 {{ item.publication || 'N/A' }}</span>
+                                <span>📊 Cited: {{ item.cited_by }}</span>
+                            </div>
+                            <div v-if="item.notes" style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px;">
+                                <strong>📝 Notes:</strong> {{ item.notes }}
+                            </div>
+                            <div class="paper-actions">
+                                <button @click="removeFromWishlist(item.id)" class="btn btn-danger btn-sm">
+                                    🗑️ Remove
+                                </button>
+                                <a v-if="item.scopus_url" :href="item.scopus_url" target="_blank" class="btn btn-primary btn-sm">
+                                    🔗 View on Scopus
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-show="activeSection === 'apikeys'" class="card">
+                        <h3 class="card-title">🔑 My API Keys</h3>
+                        
+                        <transition name="fade">
+                            <div v-if="apikeysAlert.show" class="alert" :class="'alert-' + apikeysAlert.type">
+                                {{ apikeysAlert.message }}
+                            </div>
+                        </transition>
+
+                        <div class="alert alert-info">
+                            <strong>ℹ️ Info:</strong> Add your Scopus API key to use the search feature. 
+                            Get your API key from <a href="https://dev.elsevier.com/" target="_blank">Elsevier Developer Portal</a>.
+                        </div>
+
+                        <form @submit.prevent="addApiKey">
+                            <div class="form-group">
+                                <label class="form-label">Key Name</label>
+                                <input type="text" v-model="apikeyForm.keyName" class="form-control" placeholder="e.g., My Scopus Key" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">API Key</label>
+                                <input type="text" v-model="apikeyForm.apiKey" class="form-control" placeholder="Enter your Scopus API key" required>
+                            </div>
+                            <button type="submit" :disabled="apikeysLoading" class="btn btn-success">
+                                <span v-if="!apikeysLoading">➕ Add API Key</span>
+                                <span v-else>Adding...</span>
+                            </button>
+                        </form>
+
+                        <div v-if="apikeysLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading API keys...</p>
+                        </div>
+
+                        <div v-if="!apikeysLoading && apikeys.length === 0" style="margin-top: 30px;" class="empty-state">
+                            <div class="empty-state-icon">🔑</div>
+                            <div class="empty-state-text">No API keys yet</div>
+                            <p>Add your first Scopus API key above</p>
+                        </div>
+
+                        <div style="margin-top: 30px;">
+                            <div v-for="key in apikeys" :key="key.id" class="list-item">
+                                <div class="list-item-content">
+                                    <div class="list-item-title">
+                                        {{ key.key_name }}
+                                        <span class="badge" :class="key.is_active ? 'badge-success' : 'badge-secondary'">
+                                            {{ key.is_active ? '✅ Active' : '⏸️ Inactive' }}
+                                        </span>
+                                    </div>
+                                    <div class="list-item-meta">
+                                        Added: {{ new Date(key.created_at).toLocaleDateString() }}
+                                    </div>
+                                </div>
+                                <button @click="deleteApiKey(key.id)" class="btn btn-danger btn-sm">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
         </div>
-
-        <div class="papers-grid" id="papersGrid"></div>
-
-        <div class="export-section">
-          <h3 style="margin-bottom: 15px">📥 Export Hasil</h3>
-          <button class="btn btn-primary" onclick="exportResults('json')">
-            💾 Export JSON
-          </button>
-          <button class="btn btn-primary" onclick="exportResults('csv')">
-            📊 Export CSV
-          </button>
-          <button class="btn btn-primary" onclick="exportResults('excel')">
-            📈 Export Excel
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Download Modal -->
-    <div id="downloadModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title">📥 Download PDF</h2>
-          <button class="close-btn" onclick="closeDownloadModal()">
-            &times;
-          </button>
-        </div>
-        <div id="downloadOptions">
-          <p style="text-align: center; color: #666">
-            Loading download options...
-          </p>
-        </div>
-      </div>
     </div>
 
     <script>
-      const API_BASE = "http://localhost:8000";
-      let currentSearchData = null;
+        const { createApp } = Vue;
 
-      document
-        .getElementById("searchForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          await searchPapers();
-        });
-
-      async function searchPapers() {
-        const query = document.getElementById("query").value;
-        const limit = parseInt(document.getElementById("limit").value);
-        const yearFrom = document.getElementById("yearFrom").value;
-        const yearTo = document.getElementById("yearTo").value;
-        const sortBy = document.getElementById("sortBy").value;
-
-        // Show loading
-        document.getElementById("loading").style.display = "block";
-        document.getElementById("results").style.display = "none";
-        hideAlerts();
-
-        try {
-          // Map sort values
-          const sortMap = {
-            citations: "-citedby-count",
-            date_newest: "-date",
-            date_oldest: "date",
-            relevance: "relevance",
-          };
-
-          const payload = {
-            query: query,
-            limit: limit,
-            sort_by: sortMap[sortBy] || "-citedby-count",
-          };
-
-          if (yearFrom) payload.year_from = parseInt(yearFrom);
-          if (yearTo) payload.year_to = parseInt(yearTo);
-
-          const response = await fetch(`${API_BASE}/api/search`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          });
-
-          if (!response.ok) {
-            throw new Error("Gagal mengambil data dari API");
-          }
-
-          const data = await response.json();
-          currentSearchData = payload;
-          displayResults(data);
-          showSuccess(`✅ Berhasil menemukan ${data.returned_count} paper!`);
-        } catch (error) {
-          showError("❌ Error: " + error.message);
-        } finally {
-          document.getElementById("loading").style.display = "none";
-        }
-      }
-
-      function displayResults(data) {
-        // Calculate statistics
-        const papers = data.papers;
-        const totalCitations = papers.reduce((sum, p) => sum + p.cited_by, 0);
-        const avgCitations =
-          papers.length > 0 ? (totalCitations / papers.length).toFixed(1) : 0;
-        const maxCitations =
-          papers.length > 0 ? Math.max(...papers.map((p) => p.cited_by)) : 0;
-
-        // Update stats
-        document.getElementById("totalPapers").textContent =
-          data.returned_count;
-        document.getElementById("totalCitations").textContent =
-          totalCitations.toLocaleString();
-        document.getElementById("avgCitations").textContent = avgCitations;
-        document.getElementById("maxCitations").textContent =
-          maxCitations.toLocaleString();
-
-        // Display papers
-        const grid = document.getElementById("papersGrid");
-        grid.innerHTML = "";
-
-        papers.forEach((paper, index) => {
-          const card = createPaperCard(paper, index + 1);
-          grid.appendChild(card);
-        });
-
-        // Show results
-        document.getElementById("results").style.display = "block";
-
-        // Scroll to results
-        document
-          .getElementById("results")
-          .scrollIntoView({ behavior: "smooth" });
-      }
-
-      function createPaperCard(paper, index) {
-        const card = document.createElement("div");
-        card.className = "paper-card";
-
-        const citationBadge =
-          paper.cited_by > 100 ? "🔥 " : paper.cited_by > 50 ? "⭐ " : "";
-
-        card.innerHTML = `
-                <div style="color: #999; font-size: 0.9em; margin-bottom: 10px;">#${index}</div>
-                <h3 class="paper-title">${paper.title}</h3>
-                <div class="paper-authors">👥 ${paper.authors}</div>
-                
-                <div class="paper-meta">
-                    <div class="meta-item">
-                        <span class="badge badge-citations">${citationBadge}${
-          paper.cited_by
-        } sitasi</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="badge badge-year">📅 ${paper.year}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="badge badge-type">📄 ${
-                          paper.document_type
-                        }</span>
-                    </div>
-                    ${
-                      paper.open_access
-                        ? '<div class="meta-item"><span class="badge" style="background: #4caf50; color: white;">🔓 Open Access</span></div>'
-                        : ""
-                    }
-                </div>
-
-                <div class="paper-journal">📚 ${paper.publication}</div>
-                
-                ${
-                  paper.affiliation !== "N/A"
-                    ? `<div style="color: #666; font-size: 0.9em; margin-top: 10px;">🏛️ ${paper.affiliation}</div>`
-                    : ""
+        createApp({
+            data() {
+                return {
+                    isAuthenticated: false,
+                    user: null,
+                    token: localStorage.getItem('token'),
+                    authTab: 'login',
+                    activeSection: 'search',
+                    headerSubtitle: 'Login untuk mulai searching paper di Scopus',
+                    authLoading: false,
+                    searchLoading: false,
+                    wishlistLoading: false,
+                    apikeysLoading: false,
+                    authAlert: { show: false, message: '', type: 'info' },
+                    searchAlert: { show: false, message: '', type: 'info' },
+                    wishlistAlert: { show: false, message: '', type: 'info' },
+                    apikeysAlert: { show: false, message: '', type: 'info' },
+                    loginForm: { email: '', password: '' },
+                    registerForm: { email: '', password: '', confirmPassword: '' },
+                    searchForm: { query: 'machine learning', limit: 25, yearFrom: '', yearTo: '', sortBy: '-citedby-count' },
+                    apikeyForm: { keyName: '', apiKey: '' },
+                    searchResults: [],
+                    wishlist: [],
+                    apikeys: [],
+                    apiBase: window.location.origin
                 }
-                
-                <div class="paper-links">
-                    ${
-                      paper.scopus_url !== "N/A"
-                        ? `<a href="${paper.scopus_url}" target="_blank" class="paper-link">🔗 Lihat di Scopus</a>`
-                        : ""
-                    }
-                    ${
-                      paper.doi !== "N/A"
-                        ? `<a href="https://doi.org/${paper.doi}" target="_blank" class="paper-link">📖 DOI</a>`
-                        : ""
-                    }
-                    ${
-                      paper.doi !== "N/A"
-                        ? `<button class="paper-link" style="background: #f44336; border: none; cursor: pointer;" onclick="showDownloadOptions('${
-                            paper.eid
-                          }', '${paper.doi}', '${paper.title.replace(
-                            /'/g,
-                            "\\'"
-                          )}')" title="Download PDF">📥 Download PDF</button>`
-                        : ""
-                    }
-                </div>
-            `;
-
-        return card;
-      }
-
-      async function exportResults(format) {
-        if (!currentSearchData) {
-          showError(
-            "❌ Tidak ada data untuk di-export. Lakukan pencarian terlebih dahulu."
-          );
-          return;
-        }
-
-        try {
-          showSuccess("⏳ Mengexport data...");
-
-          const response = await fetch(`${API_BASE}/api/export/${format}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
             },
-            body: JSON.stringify(currentSearchData),
-          });
-
-          if (!response.ok) {
-            throw new Error("Gagal export data");
-          }
-
-          if (format === "json") {
-            const data = await response.json();
-            const blob = new Blob([JSON.stringify(data, null, 2)], {
-              type: "application/json",
-            });
-            downloadBlob(blob, `scopus_results_${Date.now()}.json`);
-          } else {
-            const blob = await response.blob();
-            const ext = format === "csv" ? "csv" : "xlsx";
-            downloadBlob(blob, `scopus_results_${Date.now()}.${ext}`);
-          }
-
-          showSuccess(`✅ Berhasil export ke ${format.toUpperCase()}!`);
-        } catch (error) {
-          showError("❌ Error saat export: " + error.message);
-        }
-      }
-
-      function downloadBlob(blob, filename) {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
-
-      function resetForm() {
-        document.getElementById("searchForm").reset();
-        document.getElementById("results").style.display = "none";
-        currentSearchData = null;
-        hideAlerts();
-      }
-
-      function showError(message) {
-        const alert = document.getElementById("errorAlert");
-        alert.textContent = message;
-        alert.style.display = "block";
-        setTimeout(() => (alert.style.display = "none"), 5000);
-      }
-
-      function showSuccess(message) {
-        const alert = document.getElementById("successAlert");
-        alert.textContent = message;
-        alert.style.display = "block";
-        setTimeout(() => (alert.style.display = "none"), 3000);
-      }
-
-      function hideAlerts() {
-        document.getElementById("errorAlert").style.display = "none";
-        document.getElementById("successAlert").style.display = "none";
-      }
-
-      // Download PDF functions
-      async function showDownloadOptions(eid, doi, title) {
-        const modal = document.getElementById("downloadModal");
-        const optionsDiv = document.getElementById("downloadOptions");
-
-        modal.style.display = "block";
-        optionsDiv.innerHTML =
-          '<p style="text-align: center;">⏳ Loading...</p>';
-
-        try {
-          const response = await fetch(`${API_BASE}/api/download-info/${eid}`);
-          const data = await response.json();
-
-          if (data.download_methods && data.download_methods.length > 0) {
-            let html = `<h3 style="margin-bottom: 15px; color: #333;">${title.substring(
-              0,
-              80
-            )}...</h3>`;
-
-            if (data.open_access) {
-              html += `<div style="background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 15px; color: #2e7d32;">
-                  <strong>✅ Open Access:</strong> This paper is freely available!
-                </div>`;
+            
+            mounted() {
+                if (this.token) {
+                    this.validateToken();
+                }
+            },
+            
+            methods: {
+                showAlert(alertName, message, type = 'info', duration = 5000) {
+                    this[alertName] = { show: true, message, type };
+                    setTimeout(() => {
+                        this[alertName].show = false;
+                    }, duration);
+                },
+                
+                async register() {
+                    if (this.registerForm.password.length < 6) {
+                        this.showAlert('authAlert', 'Password must be at least 6 characters', 'error');
+                        return;
+                    }
+                    if (this.registerForm.password !== this.registerForm.confirmPassword) {
+                        this.showAlert('authAlert', 'Passwords do not match', 'error');
+                        return;
+                    }
+                    
+                    this.authLoading = true;
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/auth/register`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                email: this.registerForm.email,
+                                password: this.registerForm.password
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            this.showAlert('authAlert', 'Registration successful! Please login.', 'success');
+                            setTimeout(() => { this.authTab = 'login'; }, 2000);
+                            this.registerForm = { email: '', password: '', confirmPassword: '' };
+                        } else {
+                            this.showAlert('authAlert', data.detail || 'Registration failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('authAlert', 'Network error: ' + error.message, 'error');
+                    } finally {
+                        this.authLoading = false;
+                    }
+                },
+                
+                async login() {
+                    this.authLoading = true;
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/auth/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                email: this.loginForm.email,
+                                password: this.loginForm.password
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            this.token = data.access_token;
+                            this.user = data.user;
+                            localStorage.setItem('token', this.token);
+                            localStorage.setItem('user', JSON.stringify(this.user));
+                            this.isAuthenticated = true;
+                            this.headerSubtitle = 'Search, Save, and Manage Your Papers';
+                            this.showAlert('authAlert', 'Login successful!', 'success');
+                            this.loginForm = { email: '', password: '' };
+                            await this.loadApiKeys();
+                        } else {
+                            this.showAlert('authAlert', data.detail || 'Login failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('authAlert', 'Network error: ' + error.message, 'error');
+                    } finally {
+                        this.authLoading = false;
+                    }
+                },
+                
+                async validateToken() {
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/auth/me`, {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        
+                        if (response.ok) {
+                            this.user = await response.json();
+                            this.isAuthenticated = true;
+                            this.headerSubtitle = 'Search, Save, and Manage Your Papers';
+                            await this.loadApiKeys();
+                        } else {
+                            this.logout();
+                        }
+                    } catch (error) {
+                        this.logout();
+                    }
+                },
+                
+                logout() {
+                    this.token = null;
+                    this.user = null;
+                    this.isAuthenticated = false;
+                    this.headerSubtitle = 'Login untuk mulai searching paper di Scopus';
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                },
+                
+                switchSection(section) {
+                    this.activeSection = section;
+                    if (section === 'wishlist') this.loadWishlist();
+                    if (section === 'apikeys') this.loadApiKeys();
+                },
+                
+                async searchPapers() {
+                    this.searchLoading = true;
+                    this.searchResults = [];
+                    
+                    try {
+                        const body = {
+                            query: this.searchForm.query,
+                            limit: this.searchForm.limit,
+                            sort_by: this.searchForm.sortBy
+                        };
+                        
+                        if (this.searchForm.yearFrom) body.year_from = this.searchForm.yearFrom;
+                        if (this.searchForm.yearTo) body.year_to = this.searchForm.yearTo;
+                        
+                        const response = await fetch(`${this.apiBase}/api/search`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.token}`
+                            },
+                            body: JSON.stringify(body)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            this.searchResults = data.papers;
+                            this.showAlert('searchAlert', `Found ${data.returned_count} papers in ${data.execution_time.toFixed(2)}s`, 'success');
+                        } else {
+                            this.showAlert('searchAlert', data.detail || 'Search failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('searchAlert', 'Error: ' + error.message, 'error');
+                    } finally {
+                        this.searchLoading = false;
+                    }
+                },
+                
+                clearSearch() {
+                    this.searchForm = { query: '', limit: 25, yearFrom: '', yearTo: '', sortBy: '-citedby-count' };
+                    this.searchResults = [];
+                    this.searchAlert.show = false;
+                },
+                
+                async addToWishlist(paper) {
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/wishlist/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.token}`
+                            },
+                            body: JSON.stringify({
+                                title: paper.title,
+                                authors: paper.authors,
+                                year: paper.year,
+                                publication: paper.publication,
+                                cited_by: paper.cited_by,
+                                doi: paper.doi,
+                                eid: paper.eid,
+                                scopus_url: paper.scopus_url
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.showAlert('searchAlert', '✅ Paper added to wishlist!', 'success');
+                        } else {
+                            const data = await response.json();
+                            this.showAlert('searchAlert', data.detail || 'Failed to add to wishlist', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('searchAlert', 'Error: ' + error.message, 'error');
+                    }
+                },
+                
+                async loadWishlist() {
+                    this.wishlistLoading = true;
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/wishlist/`, {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        
+                        if (response.ok) {
+                            this.wishlist = await response.json();
+                        } else {
+                            this.showAlert('wishlistAlert', 'Failed to load wishlist', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('wishlistAlert', 'Error: ' + error.message, 'error');
+                    } finally {
+                        this.wishlistLoading = false;
+                    }
+                },
+                
+                async removeFromWishlist(itemId) {
+                    if (!confirm('Remove this paper from wishlist?')) return;
+                    
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/wishlist/${itemId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        
+                        if (response.ok) {
+                            this.showAlert('wishlistAlert', 'Paper removed from wishlist', 'success');
+                            await this.loadWishlist();
+                        } else {
+                            this.showAlert('wishlistAlert', 'Failed to remove paper', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('wishlistAlert', 'Error: ' + error.message, 'error');
+                    }
+                },
+                
+                async loadApiKeys() {
+                    this.apikeysLoading = true;
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/keys/`, {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        
+                        if (response.ok) {
+                            this.apikeys = await response.json();
+                        } else {
+                            this.showAlert('apikeysAlert', 'Failed to load API keys', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('apikeysAlert', 'Error: ' + error.message, 'error');
+                    } finally {
+                        this.apikeysLoading = false;
+                    }
+                },
+                
+                async addApiKey() {
+                    this.apikeysLoading = true;
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/keys/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.token}`
+                            },
+                            body: JSON.stringify({
+                                key_name: this.apikeyForm.keyName,
+                                api_key: this.apikeyForm.apiKey
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.showAlert('apikeysAlert', 'API key added successfully!', 'success');
+                            this.apikeyForm = { keyName: '', apiKey: '' };
+                            await this.loadApiKeys();
+                        } else {
+                            const data = await response.json();
+                            this.showAlert('apikeysAlert', data.detail || 'Failed to add API key', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('apikeysAlert', 'Error: ' + error.message, 'error');
+                    } finally {
+                        this.apikeysLoading = false;
+                    }
+                },
+                
+                async deleteApiKey(keyId) {
+                    if (!confirm('Delete this API key?')) return;
+                    
+                    try {
+                        const response = await fetch(`${this.apiBase}/api/keys/${keyId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        
+                        if (response.ok) {
+                            this.showAlert('apikeysAlert', 'API key deleted', 'success');
+                            await this.loadApiKeys();
+                        } else {
+                            this.showAlert('apikeysAlert', 'Failed to delete API key', 'error');
+                        }
+                    } catch (error) {
+                        this.showAlert('apikeysAlert', 'Error: ' + error.message, 'error');
+                    }
+                }
             }
-
-            data.download_methods.forEach((method) => {
-              const typeColors = {
-                official: "#2196f3",
-                scihub: "#f44336",
-                search: "#ff9800",
-              };
-              const color = typeColors[method.type] || "#667eea";
-
-              html += `
-                  <div class="download-option">
-                    <div class="download-option-title" style="color: ${color};">
-                      ${method.method}
-                    </div>
-                    <div class="download-option-note">${method.note}</div>
-                    <a href="${method.url}" target="_blank" class="download-link" style="background: ${color};">
-                      🔗 Open Link
-                    </a>
-                  </div>
-                `;
-            });
-
-            html += `<div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; font-size: 0.9em;">
-                <strong>⚠️ Note:</strong> Respect copyright laws and use these resources responsibly. 
-                Some methods may not be legal in your country. Check your institution's library access first.
-              </div>`;
-
-            optionsDiv.innerHTML = html;
-          } else {
-            optionsDiv.innerHTML = `
-                <p style="text-align: center; color: #666;">
-                  No download options available for this paper.
-                </p>
-                <div style="text-align: center; margin-top: 20px;">
-                  <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(
-                    title
-                  )}" 
-                     target="_blank" class="download-link">
-                    🔍 Search on Google Scholar
-                  </a>
-                </div>
-              `;
-          }
-        } catch (error) {
-          optionsDiv.innerHTML = `
-              <p style="text-align: center; color: #c33;">
-                ❌ Error loading download options: ${error.message}
-              </p>
-              <div style="text-align: center; margin-top: 20px;">
-                ${
-                  doi !== "N/A"
-                    ? `
-                  <a href="https://sci-hub.se/${doi}" target="_blank" class="download-link">
-                    Try Sci-Hub
-                  </a>
-                `
-                    : ""
-                }
-              </div>
-            `;
-        }
-      }
-
-      function closeDownloadModal() {
-        document.getElementById("downloadModal").style.display = "none";
-      }
-
-      // Close modal when clicking outside
-      window.onclick = function (event) {
-        const modal = document.getElementById("downloadModal");
-        if (event.target == modal) {
-          closeDownloadModal();
-        }
-      };
-
-      // Check API health on load
-      window.addEventListener("load", async () => {
-        try {
-          const response = await fetch(`${API_BASE}/health`);
-          const data = await response.json();
-          if (data.status === "healthy") {
-            console.log("✅ API Connection: OK");
-          }
-        } catch (error) {
-          showError(
-            "⚠️ Tidak dapat terhubung ke API. Pastikan server sudah berjalan!"
-          );
-        }
-      });
+        }).mount('#app');
     </script>
-  </body>
+</body>
 </html>

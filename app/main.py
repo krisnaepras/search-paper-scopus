@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 import os
 
 from app.core.config import settings
-from app.api import search, stats, export, author, download, health, auth, apikeys, wishlist
+from app.api import search, stats, export, author, download, health, auth, apikeys, wishlist, debug
 from app.db import init_db
 
 
@@ -30,10 +30,10 @@ def create_application() -> FastAPI:
     # Configure CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.cors_origins_list,
         allow_credentials=settings.cors_credentials,
-        allow_methods=settings.cors_methods,
-        allow_headers=settings.cors_headers,
+        allow_methods=[settings.cors_methods] if settings.cors_methods == "*" else settings.cors_methods.split(","),
+        allow_headers=[settings.cors_headers] if settings.cors_headers == "*" else settings.cors_headers.split(","),
     )
     
     # Mount static files
@@ -46,6 +46,7 @@ def create_application() -> FastAPI:
     app.include_router(auth.router)  # Authentication
     app.include_router(apikeys.router)  # API Key Management
     app.include_router(wishlist.router)  # Wishlist
+    app.include_router(debug.router)  # Debug endpoints
     app.include_router(search.router)
     app.include_router(stats.router)
     app.include_router(export.router)

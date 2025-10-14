@@ -14,16 +14,32 @@ class RedisCache:
     
     def __init__(self):
         try:
-            self.redis_client = redis.from_url(
-                settings.redis_url,
-                decode_responses=True
-            )
+            # Parse Redis URL to add SSL options if needed
+            redis_url = settings.redis_url
+            
+            # If using rediss:// (Redis with SSL), add SSL options
+            if redis_url.startswith('rediss://'):
+                import ssl
+                self.redis_client = redis.from_url(
+                    redis_url,
+                    decode_responses=True,
+                    ssl_cert_reqs=ssl.CERT_NONE,  # Disable SSL certificate verification
+                    ssl_check_hostname=False
+                )
+            else:
+                self.redis_client = redis.from_url(
+                    redis_url,
+                    decode_responses=True
+                )
+            
             # Test connection
             self.redis_client.ping()
             self.enabled = True
+            print("✅ Redis connected successfully")
         except Exception as e:
-            print(f"Redis connection failed: {e}. Caching disabled.")
+            print(f"⚠️  Redis connection failed: {e}. Caching disabled.")
             self.enabled = False
+            self.redis_client = None
     
     def _generate_key(self, prefix: str, **kwargs) -> str:
         """Generate cache key from parameters"""

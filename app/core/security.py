@@ -7,22 +7,45 @@ from typing import Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from cryptography.fernet import Fernet
+import base64
+import hashlib
 from app.core.config import settings
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Encryption for API keys
-cipher_suite = Fernet(settings.encryption_key.encode())
+# Encryption for API keys - generate proper Fernet key
+def get_fernet_key() -> bytes:
+    """Generate proper Fernet key from settings"""
+    # Hash the key to get exactly 32 bytes
+    key_bytes = hashlib.sha256(settings.encryption_key.encode()).digest()
+    # Encode to url-safe base64
+    return base64.urlsafe_b64encode(key_bytes)
+
+try:
+    cipher_suite = Fernet(get_fernet_key())
+except Exception as e:
+    print(f"Warning: Could not initialize Fernet cipher: {e}")
+    # Generate a new key for this session
+    cipher_suite = Fernet(Fernet.generate_key())
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify password against hash"""
+    # Bcrypt has 72 byte limit, truncate if needed
+    if len(plain_password.encode('utf-8')) > 72:
+        plain_password = plain_password[:72]
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    """Hash password"""
+    """Hash password - bcrypt has 72 byte limit"""
+    # Bcrypt can only handle passwords up to 72 bytes
+    # Truncate if longer (or pre-hash with SHA256 for very long passwords)
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # For security, we'll use SHA256 first for long passwords
+        password = hashlib.sha256(password_bytes).hexdigest()
     return pwd_context.hash(password)
 
 

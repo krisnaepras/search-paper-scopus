@@ -2,18 +2,26 @@
 Search API routes
 """
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
+from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 
 from app.schemas import SearchRequest, SearchResponse, QuickSearchResponse, SortBy
-from app.services import scopus_service
+from app.db.database import get_db
+from app.db.models import User, ApiKey
+from app.core.dependencies import get_current_user
+from app.core.security import decrypt_api_key
 
 router = APIRouter(prefix="/api", tags=["search"])
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search_papers(request: SearchRequest):
+async def search_papers(
+    request: SearchRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Search papers dengan filter lengkap dan limit control
     
@@ -27,16 +35,46 @@ async def search_papers(request: SearchRequest):
     """
     start_time = datetime.now()
     
+    # Get user's active API key
+    api_key = db.query(ApiKey).filter(
+        ApiKey.user_id == current_user.id,
+        ApiKey.is_active == True
+    ).first()
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=403,
+            detail="No active Scopus API key found. Please add an API key first."
+        )
+    
+    # Decrypt API key before use
+    decrypted_key = decrypt_api_key(api_key.api_key)
+    
+    # Create ScopusService instance with user's API key
+    from app.services.scopus_service import ScopusService
+    user_scopus_service = ScopusService(decrypted_key)
+    
     # Use service to search
-    papers, full_query, total_available = scopus_service.search_papers(
-        query=request.query,
-        limit=request.limit,
-        year_from=request.year_from,
-        year_to=request.year_to,
-        document_type=request.document_type.value if request.document_type else None,
-        subject_areas=[area.value for area in request.subject_areas] if request.subject_areas else None,
-        sort_by=request.sort_by.value
-    )
+    try:
+        papers, full_query, total_available = user_scopus_service.search_papers(
+            query=request.query,
+            limit=request.limit,
+            year_from=request.year_from,
+            year_to=request.year_to,
+            document_type=request.document_type.value if request.document_type else None,
+            subject_areas=[area.value for area in request.subject_areas] if request.subject_areas else None,
+            sort_by=request.sort_by.value,
+            use_cache=False  # Disable caching to avoid Redis issues
+        )
+    except HTTPException:
+        # Re-raise HTTPException as is
+        raise
+    except Exception as e:
+        # Catch any other errors from Scopus API
+        raise HTTPException(
+            status_code=500,
+            detail=f"Search failed: {str(e)}"
+        )
     
     execution_time = (datetime.now() - start_time).total_seconds()
     
@@ -55,19 +93,36 @@ async def quick_search(
     limit: int = Query(25, ge=1, le=1000, description="Result limit"),
     year_from: Optional[int] = Query(None, ge=1900, le=2025),
     year_to: Optional[int] = Query(None, ge=1900, le=2025),
-    sort: SortBy = Query(SortBy.citations, description="Sort by")
+    sort: SortBy = Query(SortBy.citations, description="Sort by"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
-    Quick search endpoint (GET method)
+    Quick search endpoint (GET method) - Requires authentication
     
     Example: /api/quick-search?q=machine%20learning&limit=50&year_from=2020
     """
-    papers, _, _ = scopus_service.search_papers(
+    # Get user's API key
+    api_key = db.query(ApiKey).filter(
+        ApiKey.user_id == current_user.id,
+        ApiKey.is_active == True
+    ).first()
+    
+    if not api_key:
+        raise HTTPException(status_code=403, detail="No active Scopus API key found")
+    
+    decrypted_key = decrypt_api_key(api_key.api_key)
+    
+    from app.services.scopus_service import ScopusService
+    user_scopus_service = ScopusService(decrypted_key)
+    
+    papers, _, _ = user_scopus_service.search_papers(
         query=q,
         limit=limit,
         year_from=year_from,
         year_to=year_to,
-        sort_by=sort.value
+        sort_by=sort.value,
+        use_cache=False
     )
     
     return QuickSearchResponse(
@@ -81,13 +136,30 @@ async def quick_search(
 async def get_highly_cited(
     query: str = Query(..., description="Search query"),
     min_citations: int = Query(100, ge=1, description="Minimum citations"),
-    limit: int = Query(50, ge=1, le=500)
+    limit: int = Query(50, ge=1, le=500),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Get highly cited papers (filtered by minimum citations)"""
-    papers, _, _ = scopus_service.search_papers(
+    """Get highly cited papers (filtered by minimum citations) - Requires authentication"""
+    # Get user's API key
+    api_key = db.query(ApiKey).filter(
+        ApiKey.user_id == current_user.id,
+        ApiKey.is_active == True
+    ).first()
+    
+    if not api_key:
+        raise HTTPException(status_code=403, detail="No active Scopus API key found")
+    
+    decrypted_key = decrypt_api_key(api_key.api_key)
+    
+    from app.services.scopus_service import ScopusService
+    user_scopus_service = ScopusService(decrypted_key)
+    
+    papers, _, _ = user_scopus_service.search_papers(
         query=query,
         limit=limit,
-        sort_by="-citedby-count"
+        sort_by="-citedby-count",
+        use_cache=False
     )
     
     # Filter by min citations

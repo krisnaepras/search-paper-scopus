@@ -10,6 +10,7 @@ from app.db import get_db, User
 from app.schemas.auth import UserCreate, UserLogin, Token, UserResponse
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.config import settings
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -86,12 +87,9 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(lambda: get_db())  # Placeholder, will be fixed
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get current user information
     """
-    from app.core.dependencies import get_current_user
-    user = await get_current_user(db=db)
-    return user
+    return current_user

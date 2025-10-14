@@ -11,9 +11,11 @@ from app.core.config import settings
 class ScopusService:
     """Service for Scopus API operations"""
     
-    def __init__(self, api_key: Optional[str] = None):
-        # Use provided API key or fall back to default
-        self.api_key = api_key or settings.scopus_api_key
+    def __init__(self, api_key: str):
+        # API key is required - no fallback to default
+        if not api_key:
+            raise ValueError("API key is required")
+        self.api_key = api_key
         self.base_url = settings.scopus_base_url
         self.timeout = settings.request_timeout
         self.max_per_page = settings.max_results_per_page
@@ -244,5 +246,5 @@ class ScopusService:
             return None
 
 
-# Create singleton instance
-scopus_service = ScopusService()
+# Singleton instance removed - each user should create their own instance with their API key
+scopus_service = None  # Deprecated: use ScopusService(api_key) instead
