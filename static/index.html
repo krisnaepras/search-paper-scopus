@@ -3,8 +3,87 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Scopus Paper Search v3.0</title>
+    <title>PaSco | Pencarian Paper Scopus & Wishlist Riset</title>
+    <meta
+      name="description"
+      content="PaSco membantu peneliti Indonesia menemukan, menyimpan, dan mengelola paper Scopus lengkap dengan wishlist, unduhan cepat, serta integrasi API."
+    />
+    <meta
+      name="keywords"
+      content="PaSco, Scopus, pencarian paper, riset ilmiah, download jurnal, manajemen referensi, API Scopus"
+    />
+    <meta name="author" content="PaSco" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="id" />
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+    <link rel="canonical" id="canonical-link" href="/" />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="PaSco | Pencarian Paper Scopus & Wishlist Riset"
+    />
+    <meta
+      property="og:description"
+      content="PaSco adalah portal pencarian paper Scopus yang memudahkan login aman, wishlist, ekspor data, dan opsi download multi-sumber."
+    />
+    <meta property="og:url" content="/" />
+    <meta property="og:site_name" content="PaSco" />
+    <meta name="twitter:card" content="summary" />
+    <meta
+      name="twitter:title"
+      content="PaSco | Pencarian Paper Scopus & Wishlist Riset"
+    />
+    <meta
+      name="twitter:description"
+      content="Platform pencarian paper Scopus dengan fitur wishlist, unduhan, dan API keys yang mudah digunakan."
+    />
+    <meta name="twitter:url" content="/" />
+    <meta name="twitter:creator" content="@PaSco" />
+    <meta name="theme-color" content="#008080" />
+    <script type="application/ld+json" id="ld-json">
+      { "@context": "https://schema.org" }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+    <script>
+      // Dynamically align canonical and structured data with the current host for SEO consistency
+      (function () {
+        const origin = window.location.origin;
+        const path =
+          window.location.pathname === "/" ? "/" : window.location.pathname;
+        const canonicalUrl = origin + path;
+
+        const canonicalTag = document.getElementById("canonical-link");
+        if (canonicalTag) canonicalTag.href = canonicalUrl;
+
+        const ogUrlTag = document.querySelector('meta[property="og:url"]');
+        if (ogUrlTag) ogUrlTag.setAttribute("content", canonicalUrl);
+
+        const twitterUrlTag = document.querySelector(
+          'meta[name="twitter:url"]'
+        );
+        if (twitterUrlTag) twitterUrlTag.setAttribute("content", canonicalUrl);
+
+        const ldJsonTag = document.getElementById("ld-json");
+        if (ldJsonTag) {
+          const schemaObject = {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "PaSco",
+            url: canonicalUrl,
+            description:
+              "PaSco menyediakan pencarian paper Scopus, wishlist, dan pengelolaan API key untuk mempercepat riset ilmiah.",
+            inLanguage: "id-ID",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: `${origin}/?q={search_term_string}`,
+              "query-input": "required name=search_term_string",
+            },
+          };
+          ldJsonTag.textContent = JSON.stringify(schemaObject);
+        }
+      })();
+    </script>
     <style>
       * {
         margin: 0;
@@ -18,6 +97,17 @@
         background: #008080;
         padding: 10px;
         overflow-x: hidden;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
       }
 
       .window {
@@ -452,10 +542,13 @@
   </head>
   <body>
     <div id="app">
+      <h1 class="sr-only">
+        PaSco - Pencarian Paper Scopus dengan Wishlist Riset dan Unduhan Lengkap
+      </h1>
       <!-- Auth Window -->
       <div v-if="!isAuthenticated" class="auth-window window">
         <div class="title-bar">
-          <span class="title-text">🔐 User Authentication</span>
+          <span class="title-text">🔐 PaSco User Authentication</span>
         </div>
         <div class="window-body">
           <div class="alert alert-error" v-if="authError">{{ authError }}</div>
@@ -540,7 +633,7 @@
         <!-- Main Search Window -->
         <div class="window">
           <div class="title-bar">
-            <span class="title-text">📄 Scopus Paper Search v3.0</span>
+            <span class="title-text">📄 PaSco Scopus Paper Search v3.0</span>
             <div class="window-controls">
               <button class="window-btn">_</button>
               <button class="window-btn">□</button>

@@ -3,11 +3,12 @@ Main FastAPI Application
 Clean architecture with modular routing
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 import os
+from datetime import datetime
 
 from app.core.config import settings
 from app.api import search, stats, export, author, download, health, auth, apikeys, wishlist, debug
@@ -23,8 +24,8 @@ def create_application() -> FastAPI:
         title=settings.app_name,
         description=settings.app_description,
         version=settings.app_version,
-        docs_url="/docs",
-        redoc_url="/redoc"
+        # docs_url="/docs",
+        # redoc_url="/redoc"
     )
     
     # Configure CORS
@@ -78,6 +79,38 @@ def create_application() -> FastAPI:
                 </body>
             </html>
             """.format(version=settings.app_version)
+
+    @app.get("/sitemap.xml")
+    async def sitemap(request: Request):
+        """Serve dynamic sitemap with current host"""
+        base_url = str(request.base_url).rstrip("/")
+        last_modified = datetime.utcnow().date().isoformat()
+        sitemap_urls = [
+            {"loc": f"{base_url}/", "changefreq": "daily", "priority": "1.0"},
+            # {"loc": f"{base_url}/docs", "changefreq": "weekly", "priority": "0.7"},
+            # {"loc": f"{base_url}/redoc", "changefreq": "weekly", "priority": "0.6"},
+        ]
+
+        xml_lines = [
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+            "<urlset xmlns=\"https://www.sitemaps.org/schemas/sitemap/0.9\">",
+        ]
+
+        for entry in sitemap_urls:
+            xml_lines.extend(
+                [
+                    "  <url>",
+                    f"    <loc>{entry['loc']}</loc>",
+                    f"    <lastmod>{last_modified}</lastmod>",
+                    f"    <changefreq>{entry['changefreq']}</changefreq>",
+                    f"    <priority>{entry['priority']}</priority>",
+                    "  </url>",
+                ]
+            )
+
+        xml_lines.append("</urlset>")
+
+        return Response("\n".join(xml_lines), media_type="application/xml")
     
     # Global exception handlers
     @app.exception_handler(HTTPException)
