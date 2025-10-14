@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scopus Search - Paper Finder</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .header p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .search-box {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin-bottom: 30px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+      }
+
+      .btn {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-right: 10px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background: #f0f0f0;
+        color: #333;
+      }
+
+      .btn-secondary:hover {
+        background: #e0e0e0;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        display: none;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .results {
+        display: none;
+      }
+
+      .stats-bar {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .stat-item {
+        text-align: center;
+        padding: 10px 20px;
+      }
+
+      .stat-value {
+        font-size: 2em;
+        font-weight: 700;
+        color: #667eea;
+      }
+
+      .stat-label {
+        color: #666;
+        font-size: 0.9em;
+        margin-top: 5px;
+      }
+
+      .papers-grid {
+        display: grid;
+        gap: 20px;
+      }
+
+      .paper-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+
+      .paper-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      }
+
+      .paper-title {
+        font-size: 1.3em;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+        line-height: 1.4;
+      }
+
+      .paper-authors {
+        color: #667eea;
+        margin-bottom: 10px;
+        font-weight: 500;
+      }
+
+      .paper-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin: 15px 0;
+        font-size: 0.9em;
+        color: #666;
+      }
+
+      .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+      }
+
+      .badge-citations {
+        background: #ffd700;
+        color: #333;
+      }
+
+      .badge-year {
+        background: #e0e7ff;
+        color: #667eea;
+      }
+
+      .badge-type {
+        background: #f0f0f0;
+        color: #666;
+      }
+
+      .paper-journal {
+        color: #555;
+        font-style: italic;
+        margin: 10px 0;
+      }
+
+      .paper-links {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .paper-link {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.9em;
+        margin-right: 10px;
+        transition: background 0.3s;
+      }
+
+      .paper-link:hover {
+        background: #5568d3;
+      }
+
+      .export-section {
+        text-align: center;
+        margin-top: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 12px;
+      }
+
+      .alert {
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      .alert-error {
+        background: #fee;
+        color: #c33;
+        border-left: 4px solid #c33;
+      }
+
+      .alert-success {
+        background: #efe;
+        color: #3c3;
+        border-left: 4px solid #3c3;
+      }
+
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 30px;
+        border-radius: 15px;
+        max-width: 600px;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.3s;
+      }
+
+      @keyframes slideDown {
+        from {
+          transform: translateY(-50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e0e0e0;
+      }
+
+      .modal-title {
+        font-size: 1.5em;
+        font-weight: 700;
+        color: #333;
+      }
+
+      .close-btn {
+        font-size: 2em;
+        font-weight: 300;
+        color: #999;
+        cursor: pointer;
+        transition: color 0.3s;
+        border: none;
+        background: none;
+        padding: 0;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        text-align: center;
+      }
+
+      .close-btn:hover {
+        color: #333;
+      }
+
+      .download-option {
+        padding: 15px;
+        margin: 10px 0;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        transition: all 0.3s;
+      }
+
+      .download-option:hover {
+        border-color: #667eea;
+        background: #f9f9ff;
+        transform: translateX(5px);
+      }
+
+      .download-option-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+        font-size: 1.1em;
+      }
+
+      .download-option-note {
+        font-size: 0.85em;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .download-link {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        margin-top: 10px;
+        transition: background 0.3s;
+      }
+
+      .download-link:hover {
+        background: #5568d3;
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 1.8em;
+        }
+
+        .stats-bar {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+          margin: 5px 0;
+        }
+
+        .modal-content {
+          margin: 10% 20px;
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🔍 Scopus Paper Search</h1>
+        <p>Cari dan analisis paper ilmiah dari database Scopus</p>
+      </div>
+
+      <div class="alert alert-error" id="errorAlert"></div>
+      <div class="alert alert-success" id="successAlert"></div>
+
+      <div class="search-box">
+        <form id="searchForm">
+          <div class="form-group">
+            <label for="query">🔎 Kata Kunci Pencarian</label>
+            <input
+              type="text"
+              id="query"
+              placeholder="Contoh: machine learning, obesity classification, neural networks..."
+              required
+            />
+          </div>
+
+          <div class="row">
+            <div class="form-group">
+              <label for="limit">📊 Jumlah Hasil</label>
+              <select id="limit">
+                <option value="10">10 papers</option>
+                <option value="25" selected>25 papers</option>
+                <option value="50">50 papers</option>
+                <option value="100">100 papers</option>
+                <option value="200">200 papers</option>
+                <option value="500">500 papers</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="yearFrom">📅 Tahun Dari</label>
+              <input
+                type="number"
+                id="yearFrom"
+                min="1900"
+                max="2025"
+                placeholder="2020"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="yearTo">📅 Tahun Sampai</label>
+              <input
+                type="number"
+                id="yearTo"
+                min="1900"
+                max="2025"
+                placeholder="2024"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="sortBy">🔢 Urutkan Berdasarkan</label>
+              <select id="sortBy">
+                <option value="citations" selected>Paling Banyak Sitasi</option>
+                <option value="date_newest">Terbaru</option>
+                <option value="date_oldest">Terlama</option>
+                <option value="relevance">Relevansi</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top: 25px; text-align: center">
+            <button type="submit" class="btn btn-primary">🚀 Cari Paper</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="resetForm()"
+            >
+              🔄 Reset
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Mencari paper di Scopus...</p>
+      </div>
+
+      <div class="results" id="results">
+        <div class="stats-bar" id="statsBar">
+          <div class="stat-item">
+            <div class="stat-value" id="totalPapers">0</div>
+            <div class="stat-label">Total Papers</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="totalCitations">0</div>
+            <div class="stat-label">Total Sitasi</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="avgCitations">0</div>
+            <div class="stat-label">Rata-rata Sitasi</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="maxCitations">0</div>
+            <div class="stat-label">Sitasi Tertinggi</div>
+          </div>
+        </div>
+
+        <div class="papers-grid" id="papersGrid"></div>
+
+        <div class="export-section">
+          <h3 style="margin-bottom: 15px">📥 Export Hasil</h3>
+          <button class="btn btn-primary" onclick="exportResults('json')">
+            💾 Export JSON
+          </button>
+          <button class="btn btn-primary" onclick="exportResults('csv')">
+            📊 Export CSV
+          </button>
+          <button class="btn btn-primary" onclick="exportResults('excel')">
+            📈 Export Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download Modal -->
+    <div id="downloadModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">📥 Download PDF</h2>
+          <button class="close-btn" onclick="closeDownloadModal()">
+            &times;
+          </button>
+        </div>
+        <div id="downloadOptions">
+          <p style="text-align: center; color: #666">
+            Loading download options...
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:8000";
+      let currentSearchData = null;
+
+      document
+        .getElementById("searchForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          await searchPapers();
+        });
+
+      async function searchPapers() {
+        const query = document.getElementById("query").value;
+        const limit = parseInt(document.getElementById("limit").value);
+        const yearFrom = document.getElementById("yearFrom").value;
+        const yearTo = document.getElementById("yearTo").value;
+        const sortBy = document.getElementById("sortBy").value;
+
+        // Show loading
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("results").style.display = "none";
+        hideAlerts();
+
+        try {
+          // Map sort values
+          const sortMap = {
+            citations: "-citedby-count",
+            date_newest: "-date",
+            date_oldest: "date",
+            relevance: "relevance",
+          };
+
+          const payload = {
+            query: query,
+            limit: limit,
+            sort_by: sortMap[sortBy] || "-citedby-count",
+          };
+
+          if (yearFrom) payload.year_from = parseInt(yearFrom);
+          if (yearTo) payload.year_to = parseInt(yearTo);
+
+          const response = await fetch(`${API_BASE}/api/search`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error("Gagal mengambil data dari API");
+          }
+
+          const data = await response.json();
+          currentSearchData = payload;
+          displayResults(data);
+          showSuccess(`✅ Berhasil menemukan ${data.returned_count} paper!`);
+        } catch (error) {
+          showError("❌ Error: " + error.message);
+        } finally {
+          document.getElementById("loading").style.display = "none";
+        }
+      }
+
+      function displayResults(data) {
+        // Calculate statistics
+        const papers = data.papers;
+        const totalCitations = papers.reduce((sum, p) => sum + p.cited_by, 0);
+        const avgCitations =
+          papers.length > 0 ? (totalCitations / papers.length).toFixed(1) : 0;
+        const maxCitations =
+          papers.length > 0 ? Math.max(...papers.map((p) => p.cited_by)) : 0;
+
+        // Update stats
+        document.getElementById("totalPapers").textContent =
+          data.returned_count;
+        document.getElementById("totalCitations").textContent =
+          totalCitations.toLocaleString();
+        document.getElementById("avgCitations").textContent = avgCitations;
+        document.getElementById("maxCitations").textContent =
+          maxCitations.toLocaleString();
+
+        // Display papers
+        const grid = document.getElementById("papersGrid");
+        grid.innerHTML = "";
+
+        papers.forEach((paper, index) => {
+          const card = createPaperCard(paper, index + 1);
+          grid.appendChild(card);
+        });
+
+        // Show results
+        document.getElementById("results").style.display = "block";
+
+        // Scroll to results
+        document
+          .getElementById("results")
+          .scrollIntoView({ behavior: "smooth" });
+      }
+
+      function createPaperCard(paper, index) {
+        const card = document.createElement("div");
+        card.className = "paper-card";
+
+        const citationBadge =
+          paper.cited_by > 100 ? "🔥 " : paper.cited_by > 50 ? "⭐ " : "";
+
+        card.innerHTML = `
+                <div style="color: #999; font-size: 0.9em; margin-bottom: 10px;">#${index}</div>
+                <h3 class="paper-title">${paper.title}</h3>
+                <div class="paper-authors">👥 ${paper.authors}</div>
+                
+                <div class="paper-meta">
+                    <div class="meta-item">
+                        <span class="badge badge-citations">${citationBadge}${
+          paper.cited_by
+        } sitasi</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="badge badge-year">📅 ${paper.year}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="badge badge-type">📄 ${
+                          paper.document_type
+                        }</span>
+                    </div>
+                    ${
+                      paper.open_access
+                        ? '<div class="meta-item"><span class="badge" style="background: #4caf50; color: white;">🔓 Open Access</span></div>'
+                        : ""
+                    }
+                </div>
+
+                <div class="paper-journal">📚 ${paper.publication}</div>
+                
+                ${
+                  paper.affiliation !== "N/A"
+                    ? `<div style="color: #666; font-size: 0.9em; margin-top: 10px;">🏛️ ${paper.affiliation}</div>`
+                    : ""
+                }
+                
+                <div class="paper-links">
+                    ${
+                      paper.scopus_url !== "N/A"
+                        ? `<a href="${paper.scopus_url}" target="_blank" class="paper-link">🔗 Lihat di Scopus</a>`
+                        : ""
+                    }
+                    ${
+                      paper.doi !== "N/A"
+                        ? `<a href="https://doi.org/${paper.doi}" target="_blank" class="paper-link">📖 DOI</a>`
+                        : ""
+                    }
+                    ${
+                      paper.doi !== "N/A"
+                        ? `<button class="paper-link" style="background: #f44336; border: none; cursor: pointer;" onclick="showDownloadOptions('${
+                            paper.eid
+                          }', '${paper.doi}', '${paper.title.replace(
+                            /'/g,
+                            "\\'"
+                          )}')" title="Download PDF">📥 Download PDF</button>`
+                        : ""
+                    }
+                </div>
+            `;
+
+        return card;
+      }
+
+      async function exportResults(format) {
+        if (!currentSearchData) {
+          showError(
+            "❌ Tidak ada data untuk di-export. Lakukan pencarian terlebih dahulu."
+          );
+          return;
+        }
+
+        try {
+          showSuccess("⏳ Mengexport data...");
+
+          const response = await fetch(`${API_BASE}/api/export/${format}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(currentSearchData),
+          });
+
+          if (!response.ok) {
+            throw new Error("Gagal export data");
+          }
+
+          if (format === "json") {
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], {
+              type: "application/json",
+            });
+            downloadBlob(blob, `scopus_results_${Date.now()}.json`);
+          } else {
+            const blob = await response.blob();
+            const ext = format === "csv" ? "csv" : "xlsx";
+            downloadBlob(blob, `scopus_results_${Date.now()}.${ext}`);
+          }
+
+          showSuccess(`✅ Berhasil export ke ${format.toUpperCase()}!`);
+        } catch (error) {
+          showError("❌ Error saat export: " + error.message);
+        }
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+
+      function resetForm() {
+        document.getElementById("searchForm").reset();
+        document.getElementById("results").style.display = "none";
+        currentSearchData = null;
+        hideAlerts();
+      }
+
+      function showError(message) {
+        const alert = document.getElementById("errorAlert");
+        alert.textContent = message;
+        alert.style.display = "block";
+        setTimeout(() => (alert.style.display = "none"), 5000);
+      }
+
+      function showSuccess(message) {
+        const alert = document.getElementById("successAlert");
+        alert.textContent = message;
+        alert.style.display = "block";
+        setTimeout(() => (alert.style.display = "none"), 3000);
+      }
+
+      function hideAlerts() {
+        document.getElementById("errorAlert").style.display = "none";
+        document.getElementById("successAlert").style.display = "none";
+      }
+
+      // Download PDF functions
+      async function showDownloadOptions(eid, doi, title) {
+        const modal = document.getElementById("downloadModal");
+        const optionsDiv = document.getElementById("downloadOptions");
+
+        modal.style.display = "block";
+        optionsDiv.innerHTML =
+          '<p style="text-align: center;">⏳ Loading...</p>';
+
+        try {
+          const response = await fetch(`${API_BASE}/api/download-info/${eid}`);
+          const data = await response.json();
+
+          if (data.download_methods && data.download_methods.length > 0) {
+            let html = `<h3 style="margin-bottom: 15px; color: #333;">${title.substring(
+              0,
+              80
+            )}...</h3>`;
+
+            if (data.open_access) {
+              html += `<div style="background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 15px; color: #2e7d32;">
+                  <strong>✅ Open Access:</strong> This paper is freely available!
+                </div>`;
+            }
+
+            data.download_methods.forEach((method) => {
+              const typeColors = {
+                official: "#2196f3",
+                scihub: "#f44336",
+                search: "#ff9800",
+              };
+              const color = typeColors[method.type] || "#667eea";
+
+              html += `
+                  <div class="download-option">
+                    <div class="download-option-title" style="color: ${color};">
+                      ${method.method}
+                    </div>
+                    <div class="download-option-note">${method.note}</div>
+                    <a href="${method.url}" target="_blank" class="download-link" style="background: ${color};">
+                      🔗 Open Link
+                    </a>
+                  </div>
+                `;
+            });
+
+            html += `<div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; font-size: 0.9em;">
+                <strong>⚠️ Note:</strong> Respect copyright laws and use these resources responsibly. 
+                Some methods may not be legal in your country. Check your institution's library access first.
+              </div>`;
+
+            optionsDiv.innerHTML = html;
+          } else {
+            optionsDiv.innerHTML = `
+                <p style="text-align: center; color: #666;">
+                  No download options available for this paper.
+                </p>
+                <div style="text-align: center; margin-top: 20px;">
+                  <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(
+                    title
+                  )}" 
+                     target="_blank" class="download-link">
+                    🔍 Search on Google Scholar
+                  </a>
+                </div>
+              `;
+          }
+        } catch (error) {
+          optionsDiv.innerHTML = `
+              <p style="text-align: center; color: #c33;">
+                ❌ Error loading download options: ${error.message}
+              </p>
+              <div style="text-align: center; margin-top: 20px;">
+                ${
+                  doi !== "N/A"
+                    ? `
+                  <a href="https://sci-hub.se/${doi}" target="_blank" class="download-link">
+                    Try Sci-Hub
+                  </a>
+                `
+                    : ""
+                }
+              </div>
+            `;
+        }
+      }
+
+      function closeDownloadModal() {
+        document.getElementById("downloadModal").style.display = "none";
+      }
+
+      // Close modal when clicking outside
+      window.onclick = function (event) {
+        const modal = document.getElementById("downloadModal");
+        if (event.target == modal) {
+          closeDownloadModal();
+        }
+      };
+
+      // Check API health on load
+      window.addEventListener("load", async () => {
+        try {
+          const response = await fetch(`${API_BASE}/health`);
+          const data = await response.json();
+          if (data.status === "healthy") {
+            console.log("✅ API Connection: OK");
+          }
+        } catch (error) {
+          showError(
+            "⚠️ Tidak dapat terhubung ke API. Pastikan server sudah berjalan!"
+          );
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,264 @@
+"""
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   SCOPUS SEARCH API - ARCHITECTURE OVERVIEW                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PROJECT STRUCTURE                                                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+web-search-scopus/
+│
+├── app/                           # Main application package
+│   ├── __init__.py
+│   ├── main.py                   # ⚙️  FastAPI app factory & initialization
+│   │
+│   ├── api/                      # 🌐 API Routes (Controllers)
+│   │   ├── __init__.py
+│   │   ├── search.py            # Search endpoints
+│   │   ├── stats.py             # Statistics endpoints
+│   │   ├── export.py            # Export endpoints
+│   │   ├── author.py            # Author/Affiliation search
+│   │   ├── download.py          # Download info endpoints
+│   │   └── health.py            # Health check & API info
+│   │
+│   ├── core/                     # ⚡ Core Configuration
+│   │   ├── __init__.py
+│   │   ├── config.py            # Settings (pydantic-settings)
+│   │   └── dependencies.py      # Dependency injection
+│   │
+│   ├── schemas/                  # 📋 Pydantic Models (Validation)
+│   │   ├── __init__.py
+│   │   ├── enums.py             # Enums (DocumentType, SortBy, etc.)
+│   │   ├── paper.py             # PaperResponse model
+│   │   ├── search.py            # SearchRequest/Response models
+│   │   └── stats.py             # StatsResponse model
+│   │
+│   └── services/                 # 🔧 Business Logic Layer
+│       ├── __init__.py
+│       └── scopus_service.py    # Scopus API interactions
+│
+├── static/                       # 🌐 Web Interface
+│   └── index.html
+│
+├── .env.example                  # Environment variables template
+├── .gitignore                   # Git ignore rules
+├── requirements.txt             # Python dependencies
+├── run.py                       # 🚀 Application entry point
+├── api_scopus.py               # ⚠️  OLD: Single-file version (preserved)
+│
+└── README_NEW.md                # Documentation
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ARCHITECTURE LAYERS                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐
+│   HTTP Request  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🌐 API LAYER (app/api/)                                    │
+│  - Routes/Controllers                                        │
+│  - Request validation (Pydantic)                            │
+│  - Response formatting                                       │
+│  - Thin layer - delegates to services                       │
+└────────┬────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  📋 SCHEMAS LAYER (app/schemas/)                            │
+│  - Data validation                                           │
+│  - Request/Response models                                   │
+│  - Type safety                                               │
+└────────┬────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🔧 SERVICE LAYER (app/services/)                           │
+│  - Business logic                                            │
+│  - Scopus API interactions                                   │
+│  - Data transformation                                       │
+│  - Reusable methods                                          │
+└────────┬────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🌍 EXTERNAL API (Scopus)                                   │
+└─────────────────────────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ REQUEST FLOW EXAMPLE                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+1. Client sends POST request to /api/search
+   └─ Body: {"query": "machine learning", "limit": 50}
+
+2. app/api/search.py (Route Handler)
+   └─ Validates request using SearchRequest schema
+   └─ Calls scopus_service.search_papers(...)
+
+3. app/services/scopus_service.py (Service)
+   └─ Builds Scopus query with filters
+   └─ Fetches data from Scopus API (pagination)
+   └─ Parses and transforms data
+   └─ Returns (papers, query, total)
+
+4. app/api/search.py (Route Handler)
+   └─ Creates SearchResponse model
+   └─ Returns JSON response
+
+5. Client receives formatted response
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ KEY IMPROVEMENTS                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+✅ Separation of Concerns
+   - Routes: Handle HTTP
+   - Services: Business logic
+   - Schemas: Data validation
+   - Config: Settings management
+
+✅ Maintainability
+   - 677 lines → ~15 files (~850 lines total)
+   - Each file has single responsibility
+   - Easy to locate and modify code
+
+✅ Testability
+   - Services can be tested independently
+   - Easy to mock dependencies
+   - Clear interfaces
+
+✅ Scalability
+   - Easy to add new features
+   - Can add middleware (caching, rate limiting)
+   - Ready for horizontal scaling
+
+✅ Security
+   - API keys in .env (not in code)
+   - Environment-based configuration
+   - Input validation via Pydantic
+
+✅ Developer Experience
+   - Clear structure
+   - Type hints everywhere
+   - Auto-generated API docs
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ CONFIGURATION FLOW                                                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+.env file
+   │
+   ├─ SCOPUS_API_KEY=xxx
+   ├─ DEBUG=True
+   ├─ MAX_RESULTS_PER_PAGE=25
+   └─ ...
+   │
+   ▼
+app/core/config.py (Settings class)
+   │
+   ├─ Validates types
+   ├─ Sets defaults
+   └─ Creates settings object
+   │
+   ▼
+Used throughout application
+   │
+   ├─ app/services/scopus_service.py
+   ├─ app/main.py
+   └─ app/api/*.py
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ FILE SIZE COMPARISON                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+OLD STRUCTURE:
+├── api_scopus.py          677 lines  ⚠️  Monolithic
+
+NEW STRUCTURE:
+├── app/main.py             95 lines  ✅ App initialization
+├── app/api/search.py       95 lines  ✅ Search routes
+├── app/api/stats.py        50 lines  ✅ Stats routes
+├── app/api/export.py       70 lines  ✅ Export routes
+├── app/api/author.py       30 lines  ✅ Author routes
+├── app/api/download.py     95 lines  ✅ Download routes
+├── app/api/health.py       50 lines  ✅ Health routes
+├── app/core/config.py      55 lines  ✅ Configuration
+├── app/schemas/enums.py    45 lines  ✅ Enums
+├── app/schemas/paper.py    35 lines  ✅ Paper model
+├── app/schemas/search.py   55 lines  ✅ Search models
+├── app/schemas/stats.py    30 lines  ✅ Stats model
+├── app/services/scopus_service.py  210 lines  ✅ Business logic
+└── run.py                  35 lines  ✅ Entry point
+
+Total: ~950 lines (but much more organized!)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ HOW TO RUN                                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+1. Setup:
+   $ cp .env.example .env
+   $ pip install -r requirements.txt
+
+2. Run:
+   $ python run.py
+
+3. Access:
+   🌐 Web: http://localhost:8000
+   📚 Docs: http://localhost:8000/docs
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ FUTURE ENHANCEMENTS (Easy to Add)                                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+🔹 Caching (Redis/In-memory)
+   └─ Add in app/services/scopus_service.py
+
+🔹 Rate Limiting
+   └─ Add middleware in app/main.py
+
+🔹 Database (SQLAlchemy)
+   └─ Create app/db/ directory
+   └─ Add models and repositories
+
+🔹 Authentication/Authorization
+   └─ Add app/core/security.py
+   └─ Add JWT middleware
+
+🔹 Logging
+   └─ Add app/core/logging.py
+   └─ Structured logging
+
+🔹 Monitoring
+   └─ Add Prometheus metrics
+   └─ Health checks with dependencies
+
+🔹 Testing
+   └─ Create tests/ directory
+   └─ Unit tests for services
+   └─ Integration tests for APIs
+
+🔹 Docker
+   └─ Add Dockerfile
+   └─ Add docker-compose.yml
+
+🔹 CI/CD
+   └─ Add .github/workflows/
+   └─ Automated testing and deployment
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  Made with ❤️ using FastAPI and Clean Architecture principles               ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+"""
