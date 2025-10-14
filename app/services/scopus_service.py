@@ -134,31 +134,48 @@ class ScopusService:
         self,
         query: str,
         total_limit: int,
-        sort: str = "-citedby-count"
-    ) -> List[Dict]:
-        """Fetch multiple pages to get more results (efficient pagination)"""
-        all_entries = []
-        start = 0
-        
-        while len(all_entries) < total_limit:
-            result = self.search(query, count=self.max_per_page, start=start, sort=sort)
-            
+        sort: str = "-citedby-count",
+        start: int = 0
+    ) -> tuple[List[Dict], int]:
+        """Fetch multiple pages to get more results (supports offsets for pagination)"""
+        all_entries: List[Dict] = []
+        current_start = max(start, 0)
+        remaining = max(total_limit, 0)
+        total_available: Optional[int] = None
+
+        while remaining > 0:
+            count = min(self.max_per_page, remaining)
+            result = self.search(query, count=count, start=current_start, sort=sort)
+
             if not result or 'search-results' not in result:
                 break
-            
-            entries = result['search-results'].get('entry', [])
-            if not entries or len(entries) == 0:
+
+            search_results = result['search-results']
+            if total_available is None:
+                try:
+                    total_available = int(search_results.get('opensearch:totalResults', 0))
+                except (TypeError, ValueError):
+                    total_available = 0
+
+            entries = search_results.get('entry', []) or []
+            if not entries:
                 break
-            
+
             all_entries.extend(entries)
-            start += self.max_per_page
-            
-            # Stop if we got all available results
-            total_available = int(result['search-results'].get('opensearch:totalResults', 0))
-            if len(all_entries) >= total_available:
+            retrieved = len(entries)
+            remaining -= retrieved
+            current_start += retrieved
+
+            if total_available is not None and current_start >= total_available:
                 break
-        
-        return all_entries[:total_limit]
+
+            if retrieved < count:
+                break
+
+        if total_available is None:
+            total_available = 0
+
+        return all_entries[:total_limit], total_available
     
     def search_papers(
         self,
@@ -169,6 +186,7 @@ class ScopusService:
         document_type: Optional[str] = None,
         subject_areas: Optional[List[str]] = None,
         sort_by: str = "-citedby-count",
+        page: int = 1,
         use_cache: bool = True
     ) -> tuple[List[Dict], str, int]:
         """
@@ -192,7 +210,8 @@ class ScopusService:
                 "year_to": year_to,
                 "document_type": document_type,
                 "subject_areas": subject_areas,
-                "sort_by": sort_by
+                "sort_by": sort_by,
+                "page": page
             }
             cached_result = redis_cache.get_cached_search(query, limit, filters)
             if cached_result:
@@ -203,14 +222,19 @@ class ScopusService:
                 )
         
         # Fetch entries
-        entries = self.fetch_multiple_pages(full_query, limit, sort_by)
+        start_index = max(page - 1, 0) * limit
+        entries, total_available = self.fetch_multiple_pages(
+            full_query,
+            limit,
+            sort_by,
+            start=start_index
+        )
         
         # Parse results
         papers = [self.parse_entry(entry) for entry in entries if 'error' not in entry]
-        
-        # Get total available (from first request)
-        first_result = self.search(full_query, count=1)
-        total_available = int(first_result.get('search-results', {}).get('opensearch:totalResults', 0))
+
+        if total_available is None:
+            total_available = 0
         
         # Cache results if enabled
         if use_cache:
@@ -225,13 +249,13 @@ class ScopusService:
     def search_by_author(self, author_name: str, limit: int = 25) -> List[Dict]:
         """Search papers by author name"""
         query = f"AUTHOR-NAME({author_name})"
-        entries = self.fetch_multiple_pages(query, limit)
+        entries, _ = self.fetch_multiple_pages(query, limit)
         return [self.parse_entry(entry) for entry in entries if 'error' not in entry]
     
     def search_by_affiliation(self, institution: str, limit: int = 25) -> List[Dict]:
         """Search papers by institution/affiliation"""
         query = f"AFFIL({institution})"
-        entries = self.fetch_multiple_pages(query, limit)
+        entries, _ = self.fetch_multiple_pages(query, limit)
         return [self.parse_entry(entry) for entry in entries if 'error' not in entry]
     
     def get_paper_by_eid(self, eid: str) -> Optional[Dict]:

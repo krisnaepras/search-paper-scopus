@@ -91,12 +91,26 @@
         box-sizing: border-box;
       }
 
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+
       body {
         font-family: "MS Sans Serif", "Segoe UI", Tahoma, Geneva, Verdana,
           sans-serif;
         background: #008080;
         padding: 10px;
-        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #app {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
       }
 
       .sr-only {
@@ -183,6 +197,14 @@
         padding: 10px;
         margin-bottom: 8px;
         position: relative;
+        flex-shrink: 0;
+      }
+
+      .group-box:has(.results-grid) {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
       }
 
       .group-box legend {
@@ -272,8 +294,9 @@
       .results-grid {
         border: 1px inset #808080;
         background: white;
-        max-height: 500px;
+        flex: 1;
         overflow-y: auto;
+        min-height: 200px;
       }
 
       .result-item {
@@ -345,7 +368,7 @@
       /* Auth */
       .auth-window {
         max-width: 400px;
-        margin: 50px auto;
+        margin: auto;
       }
 
       .tab-buttons {
@@ -455,11 +478,30 @@
 
       /* Layout */
       .main-container {
-        display: grid;
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         gap: 10px;
         max-width: 1200px;
+        width: 100%;
         margin: 0 auto;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .main-container > .window {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 0;
+      }
+
+      .main-container .window-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow-y: auto;
       }
 
       .search-filters {
@@ -537,6 +579,28 @@
         margin-top: 10px;
         font-size: 10px;
         color: #404040;
+      }
+
+      .pagination {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        font-size: 11px;
+        background: #c0c0c0;
+        padding: 6px 8px;
+        border: 1px solid #808080;
+      }
+
+      .pagination button {
+        min-width: 70px;
+        padding: 2px 8px;
+        font-size: 11px;
+      }
+
+      .pagination-info {
+        flex: 1;
+        text-align: center;
       }
 
       .watermark {
@@ -715,9 +779,12 @@
                 <div class="filter-group">
                   <label>Sort By:</label>
                   <select v-model="sortBy">
-                    <option value="citations">Citations</option>
-                    <option value="date">Date</option>
-                    <option value="relevance">Relevance</option>
+                    <option value="-citedby-count">
+                      Citations (tertinggi)
+                    </option>
+                    <option value="-date">Tanggal terbaru</option>
+                    <option value="date">Tanggal terlama</option>
+                    <option value="relevance">Relevansi</option>
                   </select>
                 </div>
               </div>
@@ -778,6 +845,36 @@
                     <button @click="openLink(paper.scopus_url)">🔗 Open</button>
                   </div>
                 </div>
+              </div>
+              <div class="pagination" v-if="totalPages > 1">
+                <button
+                  @click="goToPage(1)"
+                  :disabled="page === 1 || searching"
+                >
+                  First
+                </button>
+                <button
+                  @click="previousPage"
+                  :disabled="page === 1 || searching"
+                >
+                  Prev
+                </button>
+                <span class="pagination-info">
+                  Page {{ page }} of {{ totalPages }} (Total {{ totalAvailable
+                  }})
+                </span>
+                <button
+                  @click="nextPage"
+                  :disabled="page === totalPages || searching"
+                >
+                  Next
+                </button>
+                <button
+                  @click="goToPage(totalPages)"
+                  :disabled="page === totalPages || searching"
+                >
+                  Last
+                </button>
               </div>
             </fieldset>
 
@@ -985,7 +1082,10 @@
             yearFrom: null,
             yearTo: null,
             limit: 25,
-            sortBy: "citations",
+            page: 1,
+            totalPages: 1,
+            totalAvailable: 0,
+            sortBy: "-citedby-count",
             searching: false,
             searchError: "",
             searchResults: [],
@@ -1091,18 +1191,30 @@
             this.closeDownloadDialog();
           },
 
-          async search() {
+          async search(resetPage = true) {
+            if (typeof resetPage === "object" && resetPage !== null) {
+              resetPage = true;
+            }
             if (!this.searchQuery.trim()) return;
 
+            if (resetPage) {
+              this.page = 1;
+            }
+
+            await this.fetchSearch();
+          },
+
+          async fetchSearch() {
             this.searching = true;
             this.searchError = "";
-            this.statusMessage = "Searching...";
+            this.statusMessage = `Searching page ${this.page}...`;
 
             try {
               const params = {
                 query: this.searchQuery,
                 limit: this.limit,
                 sort_by: this.sortBy,
+                page: this.page,
               };
               if (this.yearFrom) params.year_from = this.yearFrom;
               if (this.yearTo) params.year_to = this.yearTo;
@@ -1122,7 +1234,13 @@
                 this.searchResults = (data.papers || []).map((paper) =>
                   this.normalizePaper(paper)
                 );
-                this.statusMessage = `Found ${data.total_available} papers, showing ${data.returned_count}`;
+                this.totalAvailable = data.total_available || 0;
+                this.totalPages = data.total_pages || 1;
+                this.page = data.page || this.page;
+                if (typeof data.per_page === "number") {
+                  this.limit = data.per_page;
+                }
+                this.statusMessage = `Found ${this.totalAvailable} papers, page ${this.page} of ${this.totalPages} (showing ${data.returned_count})`;
               } else {
                 this.searchError = data.message || "Search failed";
                 this.statusMessage = "Search failed";
@@ -1140,9 +1258,33 @@
             this.yearFrom = null;
             this.yearTo = null;
             this.limit = 25;
+            this.page = 1;
+            this.totalPages = 1;
+            this.totalAvailable = 0;
             this.searchResults = [];
             this.searchError = "";
             this.statusMessage = "Ready";
+          },
+
+          goToPage(page) {
+            const target = Number(page);
+            if (!Number.isFinite(target)) return;
+            if (target < 1 || target > this.totalPages || target === this.page)
+              return;
+            this.page = target;
+            return this.search(false);
+          },
+
+          nextPage() {
+            if (this.page >= this.totalPages) return;
+            this.page += 1;
+            return this.search(false);
+          },
+
+          previousPage() {
+            if (this.page <= 1) return;
+            this.page -= 1;
+            return this.search(false);
           },
 
           async loadWishlist() {
@@ -1654,6 +1796,6 @@
         },
       }).mount("#app");
     </script>
-    <div class="watermark">Dibuat oleh krisnaepras</div>
+    <!-- <div class="watermark">Dibuat oleh krisnaepras</div> -->
   </body>
 </html>

@@ -2,10 +2,12 @@
 Search API routes
 """
 
+import math
+from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, Query, HTTPException, Depends
 from sqlalchemy.orm import Session
-from typing import Optional
-from datetime import datetime
 
 from app.schemas import SearchRequest, SearchResponse, QuickSearchResponse, SortBy
 from app.db.database import get_db
@@ -64,6 +66,7 @@ async def search_papers(
             document_type=request.document_type.value if request.document_type else None,
             subject_areas=[area.value for area in request.subject_areas] if request.subject_areas else None,
             sort_by=request.sort_by.value,
+            page=request.page,
             use_cache=False  # Disable caching to avoid Redis issues
         )
     except HTTPException:
@@ -77,10 +80,30 @@ async def search_papers(
         )
     
     execution_time = (datetime.now() - start_time).total_seconds()
+
+    total_pages = max(1, math.ceil(total_available / request.limit)) if request.limit else 1
+    current_page = min(max(1, request.page), total_pages)
+
+    if current_page != request.page and total_available > 0:
+        papers, full_query, total_available = user_scopus_service.search_papers(
+            query=request.query,
+            limit=request.limit,
+            year_from=request.year_from,
+            year_to=request.year_to,
+            document_type=request.document_type.value if request.document_type else None,
+            subject_areas=[area.value for area in request.subject_areas] if request.subject_areas else None,
+            sort_by=request.sort_by.value,
+            page=current_page,
+            use_cache=False
+        )
+        total_pages = max(1, math.ceil(total_available / request.limit)) if request.limit else 1
     
     return SearchResponse(
         total_available=total_available,
         returned_count=len(papers),
+        page=current_page,
+        per_page=request.limit,
+        total_pages=total_pages,
         query=full_query,
         papers=papers,
         execution_time=execution_time

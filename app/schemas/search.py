@@ -11,7 +11,8 @@ from app.schemas.paper import PaperResponse
 class SearchRequest(BaseModel):
     """Search request parameters"""
     query: str = Field(..., description="Search query (e.g., 'machine learning')", min_length=1)
-    limit: int = Field(25, ge=1, le=1000, description="Maximum number of results (1-1000)")
+    limit: int = Field(25, ge=1, le=1000, description="Maximum number of results per page (1-1000)")
+    page: int = Field(1, ge=1, description="Page number (1-based)")
     year_from: Optional[int] = Field(None, ge=1900, le=2025, description="Start year")
     year_to: Optional[int] = Field(None, ge=1900, le=2025, description="End year")
     document_type: Optional[DocumentType] = Field(None, description="Document type filter")
@@ -23,6 +24,7 @@ class SearchRequest(BaseModel):
             "example": {
                 "query": "machine learning",
                 "limit": 50,
+                "page": 1,
                 "year_from": 2020,
                 "year_to": 2024,
                 "document_type": "ar",
@@ -36,6 +38,9 @@ class SearchResponse(BaseModel):
     """Search response with results"""
     total_available: int = Field(..., description="Total papers available in Scopus")
     returned_count: int = Field(..., description="Number of papers returned")
+    page: int = Field(..., ge=1, description="Current page number")
+    per_page: int = Field(..., ge=1, le=1000, description="Results per page")
+    total_pages: int = Field(..., ge=1, description="Total number of pages")
     query: str = Field(..., description="Actual query used")
     papers: List[PaperResponse] = Field(..., description="List of papers")
     execution_time: float = Field(..., description="Query execution time in seconds")
@@ -45,6 +50,9 @@ class SearchResponse(BaseModel):
             "example": {
                 "total_available": 5420,
                 "returned_count": 50,
+                "page": 1,
+                "per_page": 50,
+                "total_pages": 109,
                 "query": "machine learning AND PUBYEAR > 2019 AND PUBYEAR < 2025",
                 "papers": [],
                 "execution_time": 2.45
