@@ -57,6 +57,9 @@ htmlcov/
 *.json
 !scopus_response.json
 
+# SSL artifacts
+certs/
+
 # Temporary files
 test_export.*
 scopus_results_*
