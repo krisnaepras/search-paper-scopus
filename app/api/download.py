@@ -4,15 +4,28 @@ Download and DOI resolution API routes
 
 from fastapi import APIRouter, Path, HTTPException, Query, Depends
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
-import requests
 
 from app.core.config import settings
-from app.db.database import get_db
 from app.db.models import User
 from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/api", tags=["download"])
+
+
+def clean_doi(doi: str) -> str:
+    """Normalize DOI strings for resolver usage"""
+    if not doi:
+        return ""
+    return (
+        doi.strip()
+        .replace("https://doi.org/", "")
+        .replace("http://doi.org/", "")
+        .replace("https://dx.doi.org/", "")
+        .replace("http://dx.doi.org/", "")
+        .replace("doi:", "")
+        .replace("DOI:", "")
+        .strip()
+    ).lstrip("/")
 
 
 @router.get("/download")
@@ -26,10 +39,11 @@ async def download_paper(
     if not scopus_id or scopus_id == 'N/A':
         raise HTTPException(status_code=404, detail="Scopus ID not available")
     
-    # Redirect to Sci-Hub (try multiple mirrors)
-    scihub_url = f"https://sci-hub.se/{scopus_id}"
+    scihub_urls = settings.build_scihub_urls(scopus_id)
+    if not scihub_urls:
+        raise HTTPException(status_code=500, detail="Sci-Hub mirrors not configured")
     
-    return RedirectResponse(url=scihub_url)
+    return RedirectResponse(url=scihub_urls[0])
 
 
 @router.get("/pdf-link/{doi:path}")
@@ -42,16 +56,14 @@ async def get_pdf_link(doi: str = Path(..., description="DOI of the paper")):
         raise HTTPException(status_code=404, detail="DOI not available")
     
     # Clean DOI
-    doi_clean = doi.replace('http://', '').replace('https://', '').replace('doi.org/', '')
+    doi_clean = clean_doi(doi)
+    if not doi_clean:
+        raise HTTPException(status_code=400, detail="Unable to normalize DOI")
     
     return {
         "doi": doi_clean,
         "doi_url": f"https://doi.org/{doi_clean}",
-        "scihub_urls": [
-            f"https://sci-hub.se/{doi_clean}",
-            f"https://sci-hub.st/{doi_clean}",
-            f"https://sci-hub.ru/{doi_clean}"
-        ],
+        "scihub_urls": settings.build_scihub_urls(doi_clean),
         "note": "Sci-Hub provides free access to academic papers. Use at your own discretion and respect copyright laws."
     }
 
@@ -82,32 +94,33 @@ async def get_download_info(
     }
     
     if doi != 'N/A':
-        doi_clean = doi.replace('http://', '').replace('https://', '').replace('doi.org/', '')
-        download_options["download_methods"].extend([
+        doi_clean = clean_doi(doi)
+        if not doi_clean:
+            return download_options
+        scihub_urls = settings.build_scihub_urls(doi_clean)
+        download_methods = [
             {
                 "method": "Official Publisher",
                 "url": f"https://doi.org/{doi_clean}",
                 "type": "official",
                 "note": "May require subscription or payment"
             },
-            {
-                "method": "Sci-Hub (Mirror 1)",
-                "url": f"https://sci-hub.se/{doi_clean}",
-                "type": "scihub",
-                "note": "Free access - check your local laws"
-            },
-            {
-                "method": "Sci-Hub (Mirror 2)",
-                "url": f"https://sci-hub.st/{doi_clean}",
-                "type": "scihub",
-                "note": "Free access - check your local laws"
-            },
+            *(
+                {
+                    "method": f"Sci-Hub (Mirror {idx + 1})",
+                    "url": url,
+                    "type": "scihub",
+                    "note": "Free access - check your local laws"
+                }
+                for idx, url in enumerate(scihub_urls)
+            ),
             {
                 "method": "Google Scholar",
                 "url": f"https://scholar.google.com/scholar?q={title.replace(' ', '+')}",
                 "type": "search",
                 "note": "May find free PDF versions"
             }
-        ])
+        ]
+        download_options["download_methods"].extend(download_methods)
     
     return download_options

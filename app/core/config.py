@@ -6,6 +6,7 @@ Supports environment variables and .env files
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import secrets
+from urllib.parse import quote
 
 
 class Settings(BaseSettings):
@@ -63,6 +64,18 @@ class Settings(BaseSettings):
     yandex_site_verification: Optional[str] = None
     sitemap_extra_paths: str = "/docs,/redoc"
     
+    # Download / Mirror configuration
+    scihub_mirrors: str = (
+        "https://sci-hub.se,"
+        "https://sci-hub.st,"
+        "https://sci-hub.ru,"
+        "https://sci-hub.is,"
+        "https://sci-hub.ren,"
+        "https://sci-hub.hkvisa.net,"
+        "https://sci-hub.it.nrw,"
+        "https://sci-hub.wf"
+    )
+    
     @property
     def canonical_hostname(self) -> Optional[str]:
         """Return sanitized canonical hostname for redirect enforcement"""
@@ -89,6 +102,39 @@ class Settings(BaseSettings):
                 path = f"/{path}"
             paths.append(path)
         return paths
+    
+    @property
+    def scihub_mirror_list(self) -> list[str]:
+        """Return list of sanitized Sci-Hub mirrors"""
+        mirrors: list[str] = []
+        for raw in self.scihub_mirrors.split(","):
+            mirror = raw.strip()
+            if not mirror:
+                continue
+            if not mirror.startswith(("http://", "https://")):
+                mirror = f"https://{mirror}"
+            mirror = mirror.rstrip("/")
+            if mirror:
+                mirrors.append(mirror)
+        return mirrors or ["https://sci-hub.se"]
+    
+    def build_scihub_urls(self, identifier: str) -> list[str]:
+        """Build Sci-Hub URLs for a cleaned DOI/identifier"""
+        if not identifier:
+            return []
+        clean_identifier = (
+            identifier.strip()
+            .replace("https://doi.org/", "")
+            .replace("http://doi.org/", "")
+            .replace("https://dx.doi.org/", "")
+            .replace("http://dx.doi.org/", "")
+            .replace("doi:", "")
+            .replace("DOI:", "")
+        ).lstrip("/")
+        if not clean_identifier:
+            return []
+        encoded_identifier = quote(clean_identifier, safe="/:;()@._-")
+        return [f"{mirror}/{encoded_identifier}" for mirror in self.scihub_mirror_list]
     
     # API Limits
     max_results_per_page: int = 25

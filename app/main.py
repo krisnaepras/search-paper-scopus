@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, Response, PlainTextResponse, RedirectResponse
 import os
+import json
 from datetime import datetime
 
 from app.core.config import settings
@@ -60,6 +61,21 @@ def create_application() -> FastAPI:
         if "</head>" in html:
             return html.replace("</head>", f"    {injection}</head>", 1)
         return html + f"\n{injection}"
+    
+    public_config = {
+        "scihubMirrors": settings.scihub_mirror_list,
+    }
+    
+    def inject_public_config(html: str) -> str:
+        """Inject serialized public config JSON"""
+        placeholder = "__PUBLIC_CONFIG__"
+        if placeholder not in html:
+            return html
+        return html.replace(placeholder, json.dumps(public_config), 1)
+    
+    def prepare_html(html: str) -> str:
+        """Apply HTML injections for verification tags and config"""
+        return inject_public_config(inject_verification_tags(html))
     
     def get_index_last_modified() -> str:
         """Return last modified date for sitemap entries"""
@@ -138,9 +154,9 @@ def create_application() -> FastAPI:
         html_path = os.path.join(static_path, "index.html")
         if os.path.exists(html_path):
             with open(html_path, 'r', encoding='utf-8') as f:
-                return inject_verification_tags(f.read())
+                return prepare_html(f.read())
         else:
-            return inject_verification_tags("""
+            return prepare_html("""
             <html>
                 <body style="font-family: Arial; text-align: center; padding: 50px;">
                     <h1>🚀 Scopus Search REST API</h1>

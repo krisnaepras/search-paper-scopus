@@ -46,10 +46,46 @@
     <script type="application/ld+json" id="ld-json">
       { "@context": "https://schema.org" }
     </script>
+    <script id="public-config" type="application/json">
+      __PUBLIC_CONFIG__
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
     <script>
       // Dynamically align canonical, keywords, and structured data for SEO consistency
       (function () {
+        const fallbackScihubMirrors = [
+          "https://sci-hub.se",
+          "https://sci-hub.st",
+          "https://sci-hub.ru",
+          "https://sci-hub.is",
+          "https://sci-hub.ren",
+          "https://sci-hub.hkvisa.net",
+          "https://sci-hub.it.nrw",
+          "https://sci-hub.wf",
+          "https://sci-hub.shop",
+        ];
+
+        let publicConfig = {};
+        const configNode = document.getElementById("public-config");
+        if (configNode) {
+          try {
+            publicConfig = JSON.parse(configNode.textContent || "{}");
+          } catch (error) {
+            console.warn("Failed to parse public config", error);
+          }
+        }
+
+        const scihubMirrors =
+          Array.isArray(publicConfig.scihubMirrors) &&
+          publicConfig.scihubMirrors.length
+            ? publicConfig.scihubMirrors
+            : fallbackScihubMirrors;
+
+        publicConfig.scihubMirrors = scihubMirrors;
+        publicConfig.generatedAt = new Date().toISOString();
+        window.__PASCO_PUBLIC_CONFIG__ = publicConfig;
+        window.__PASCO_SCIHUB_FALLBACK__ = fallbackScihubMirrors;
+
         const keywordVariants = [
           "pencarian jurnal scopus indonesia",
           "pencarian artikel scopus berbahasa indonesia",
@@ -113,7 +149,7 @@
           "scopus download automation indonesia",
           "alat evaluasi penelitian scopus",
           "peta kolaborasi riset scopus",
-          "inspirasi riset scopus indonesia"
+          "inspirasi riset scopus indonesia",
         ];
 
         const keywordString = keywordVariants.join(", ");
@@ -168,6 +204,13 @@
               "@type": "SearchAction",
               target: `${origin}/?q={search_term_string}`,
               "query-input": "required name=search_term_string",
+            },
+            offers: {
+              "@type": "Offer",
+              url: canonicalUrl,
+              price: "0",
+              priceCurrency: "IDR",
+              availability: "https://schema.org/InStock",
             },
           };
           ldJsonTag.textContent = JSON.stringify(schemaObject);
@@ -1179,6 +1222,13 @@
 
     <script>
       const { createApp } = Vue;
+      const PUBLIC_CONFIG = window.__PASCO_PUBLIC_CONFIG__ || {};
+      const FALLBACK_SCIHUB_MIRRORS =
+        window.__PASCO_SCIHUB_FALLBACK__ || [
+          "https://sci-hub.se",
+          "https://sci-hub.st",
+          "https://sci-hub.ru",
+        ];
 
       createApp({
         data() {
@@ -1207,6 +1257,12 @@
             apiKeys: [],
             newApiKey: { name: "", key: "" },
             statusMessage: "Ready",
+            fallbackScihubMirrors: FALLBACK_SCIHUB_MIRRORS,
+            scihubMirrors:
+              Array.isArray(PUBLIC_CONFIG.scihubMirrors) &&
+              PUBLIC_CONFIG.scihubMirrors.length
+                ? PUBLIC_CONFIG.scihubMirrors
+                : FALLBACK_SCIHUB_MIRRORS,
             downloadDialog: {
               visible: false,
               paper: null,
@@ -1226,6 +1282,17 @@
         },
 
         methods: {
+          getSciHubMirrors() {
+            return this.scihubMirrors && this.scihubMirrors.length
+              ? this.scihubMirrors
+              : this.fallbackScihubMirrors;
+          },
+
+          formatMirrorHost(mirror) {
+            if (!mirror) return "";
+            return mirror.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+          },
+
           checkAuth() {
             this.token = localStorage.getItem("token") || "";
             this.userEmail = localStorage.getItem("userEmail") || "";
@@ -1665,24 +1732,22 @@
                 note: "Redirect through DOI resolver",
                 type: "doi",
               });
-              options.push({
-                label: "Sci-Hub (.se mirror)",
-                url: `https://sci-hub.se/${cleanDoi}`,
-                note: "Attempt PDF retrieval (mirror .se)",
-                type: "scihub",
-              });
-              options.push({
-                label: "Sci-Hub (.st mirror)",
-                url: `https://sci-hub.st/${cleanDoi}`,
-                note: "Alternate Sci-Hub mirror (.st)",
-                type: "scihub",
+              this.getSciHubMirrors().forEach((mirror, idx) => {
+                const host = this.formatMirrorHost(mirror);
+                options.push({
+                  label: `Sci-Hub (mirror ${idx + 1})`,
+                  url: `${mirror}/${cleanDoi}`,
+                  note: `Try Sci-Hub mirror ${host || idx + 1}`,
+                  type: "scihub",
+                });
               });
             } else if (paper.title && paper.title !== "N/A") {
               const encodedTitle = encodeURIComponent(paper.title);
+              const mirror = this.getSciHubMirrors()[0] || "https://sci-hub.se";
               options.push({
                 label: "Sci-Hub (title search)",
-                url: `https://sci-hub.se/${encodedTitle}`,
-                note: "Use title search on Sci-Hub",
+                url: `${mirror}/${encodedTitle}`,
+                note: `Use title search on ${this.formatMirrorHost(mirror)}`,
                 type: "scihub",
               });
             }
