@@ -12,6 +12,7 @@
       name="keywords"
       content="PaSco, Scopus, pencarian paper, riset ilmiah, download jurnal, manajemen referensi, API Scopus"
     />
+    <meta name="news_keywords" id="news-keywords-meta" content="" />
     <meta name="author" content="PaSco" />
     <meta name="robots" content="index, follow" />
     <meta name="language" content="id" />
@@ -19,6 +20,7 @@
     <link rel="canonical" id="canonical-link" href="/" />
     <meta property="og:locale" content="id_ID" />
     <meta property="og:type" content="website" />
+    <meta property="article:section" content="Scopus Research Tools" />
     <meta
       property="og:title"
       content="PaSco | Pencarian Paper Scopus & Wishlist Riset"
@@ -46,8 +48,95 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
     <script>
-      // Dynamically align canonical and structured data with the current host for SEO consistency
+      // Dynamically align canonical, keywords, and structured data for SEO consistency
       (function () {
+        const keywordVariants = [
+          "pencarian jurnal scopus indonesia",
+          "pencarian artikel scopus berbahasa indonesia",
+          "download jurnal scopus pdf cepat",
+          "alat riset scopus gratis untuk kampus",
+          "wishlist paper scopus online",
+          "analisis sitasi scopus indonesia",
+          "manajemen referensi scopus cloud",
+          "dashboard pencarian scopus modern",
+          "scopus api untuk aplikasi penelitian",
+          "export hasil scopus ke excel",
+          "filter jurnal scopus berdasarkan tahun",
+          "monitoring tren riset scopus indonesia",
+          "scopus keyword suggestion indonesia",
+          "portal scopus untuk dosen dan mahasiswa",
+          "otomatisasi pencarian jurnal bereputasi",
+          "alat publikasi scopus kampus swasta",
+          "tracking publikasi scopus multi institusi",
+          "integrasi scopus restful api",
+          "scopus search restful service",
+          "scopus database search indonesia",
+          "riset bibliometrik scopus indonesia",
+          "cek duplikasi judul jurnal scopus",
+          "unduh metadata jurnal scopus cepat",
+          "perbandingan keyword scopus trending",
+          "notifikasi riset scopus terbaru",
+          "penyimpanan favorit jurnal scopus",
+          "kolaborasi riset scopus nasional",
+          "alat bantu pengusulan penelitian scopus",
+          "monitor sitasi dosen scopus",
+          "scopus search by affiliation indonesia",
+          "scopus search by author indonesia",
+          "scopus subject area filter indonesia",
+          "scopus open access discovery tool",
+          "pencarian makalah scopus otomatis",
+          "portal wishlist jurnal scopus",
+          "riwayat pencarian scopus aman",
+          "scopus restful api key management",
+          "login aman pencarian scopus",
+          "pencarian referensi sinta scopus",
+          "pencarian referensi brin scopus",
+          "pencarian topik kecerdasan buatan scopus",
+          "pencarian topik kesehatan scopus",
+          "pencarian topik energi baru scopus",
+          "pencarian topik pendidikan scopus",
+          "pencarian topik teknik sipil scopus",
+          "pencarian topik ekonomi digital scopus",
+          "pencarian topik manajemen scopus",
+          "pencarian topik umkm scopus",
+          "pencarian topik pangan scopus",
+          "pencarian topik lingkungan scopus",
+          "strategi publikasi scopus indonesia",
+          "bimbingan skripsi berbasis scopus",
+          "akurasi pencarian referensi scopus",
+          "daftar jurnal scopus dengan cepat",
+          "katalog artikel scopus terkurasi",
+          "search tool scopus multi bahasa",
+          "pencarian scopus tanpa vpn",
+          "cloud scopus search secure",
+          "scopus search analytics indonesia",
+          "scopus download automation indonesia",
+          "alat evaluasi penelitian scopus",
+          "peta kolaborasi riset scopus",
+          "inspirasi riset scopus indonesia"
+        ];
+
+        const keywordString = keywordVariants.join(", ");
+        const keywordsMeta = document.querySelector('meta[name="keywords"]');
+        if (keywordsMeta) keywordsMeta.setAttribute("content", keywordString);
+
+        const newsKeywordsMeta = document.getElementById(
+          "news-keywords-meta"
+        );
+        if (newsKeywordsMeta)
+          newsKeywordsMeta.setAttribute("content", keywordString);
+
+        const headEl =
+          document.head || document.getElementsByTagName("head")[0];
+        if (headEl) {
+          keywordVariants.slice(0, 16).forEach((keyword) => {
+            const tag = document.createElement("meta");
+            tag.setAttribute("property", "article:tag");
+            tag.setAttribute("content", keyword);
+            headEl.appendChild(tag);
+          });
+        }
+
         const origin = window.location.origin;
         const path =
           window.location.pathname === "/" ? "/" : window.location.pathname;
@@ -74,6 +163,7 @@
             description:
               "PaSco menyediakan pencarian paper Scopus, wishlist, dan pengelolaan API key untuk mempercepat riset ilmiah.",
             inLanguage: "id-ID",
+            keywords: keywordVariants,
             potentialAction: {
               "@type": "SearchAction",
               target: `${origin}/?q={search_term_string}`,
@@ -81,6 +171,17 @@
             },
           };
           ldJsonTag.textContent = JSON.stringify(schemaObject);
+        }
+
+        const keywordList = document.getElementById("keyword-ideas-list");
+        if (keywordList) {
+          const fragment = document.createDocumentFragment();
+          keywordVariants.forEach((keyword) => {
+            const li = document.createElement("li");
+            li.textContent = keyword;
+            fragment.appendChild(li);
+          });
+          keywordList.appendChild(fragment);
         }
       })();
     </script>
@@ -617,6 +718,19 @@
     </style>
   </head>
   <body>
+    <section
+      id="keyword-ideas"
+      class="sr-only"
+      aria-label="Kumpulan kata kunci PaSco"
+    >
+      <h2>Variasi Kata Kunci PaSco</h2>
+      <p>
+        Daftar di bawah ini berisi kombinasi kata kunci populer untuk mencari
+        jurnal Scopus, eksplorasi hasil riset, serta otomasi pencarian di
+        Indonesia.
+      </p>
+      <ul id="keyword-ideas-list"></ul>
+    </section>
     <div id="app">
       <h1 class="sr-only">
         PaSco - Pencarian Paper Scopus dengan Wishlist Riset dan Unduhan Lengkap
