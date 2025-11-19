@@ -54,6 +54,42 @@ class Settings(BaseSettings):
             return ["*"]
         return [origin.strip() for origin in self.cors_origins.split(",")]
     
+    # SEO / Console configuration
+    canonical_host: Optional[str] = None  # e.g. https://example.com
+    canonical_scheme: Optional[str] = None  # override scheme for redirects if needed
+    force_https: bool = False
+    google_site_verification: Optional[str] = None
+    bing_site_verification: Optional[str] = None
+    yandex_site_verification: Optional[str] = None
+    sitemap_extra_paths: str = "/docs,/redoc"
+    
+    @property
+    def canonical_hostname(self) -> Optional[str]:
+        """Return sanitized canonical hostname for redirect enforcement"""
+        if not self.canonical_host:
+            return None
+        host = self.canonical_host.lower().strip()
+        if host.startswith("https://"):
+            host = host[len("https://") :]
+        elif host.startswith("http://"):
+            host = host[len("http://") :]
+        return host.split("/")[0]
+    
+    @property
+    def sitemap_extra_paths_list(self) -> list[str]:
+        """Return list of extra sitemap paths"""
+        if not self.sitemap_extra_paths:
+            return []
+        paths: list[str] = []
+        for raw in self.sitemap_extra_paths.split(","):
+            path = raw.strip()
+            if not path:
+                continue
+            if not path.startswith("/"):
+                path = f"/{path}"
+            paths.append(path)
+        return paths
+    
     # API Limits
     max_results_per_page: int = 25
     max_total_results: int = 1000
